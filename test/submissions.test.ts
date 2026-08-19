@@ -113,6 +113,11 @@ describe("public submission endpoint", () => {
     expect(page.status).toBe(200);
     expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
     expect(html).not.toContain("<img src=x");
+    expect(html).toContain("Copy agent prompt");
+    expect(html).toContain("Set form action to http://localhost:3000/f/public-1");
+    expect(html).toContain('name=&quot;website&quot;');
+    expect(html).toContain(">Account</a>");
+    expect(html).not.toContain(">Sign in</a>");
     const csvResponse = await app.request("/admin/forms/form-1/submissions.csv", { headers: { cookie } });
     const csv = await csvResponse.text();
     expect(csvResponse.headers.get("content-disposition")).toContain("Contact.csv");
