@@ -52,8 +52,9 @@ button, input { font: inherit; }
 nav { display: flex; align-items: center; gap: 1rem; color: var(--muted); font: .875rem var(--sans); }
 nav a { border-bottom: 1px solid transparent; text-decoration: none; }
 nav a:hover { border-bottom-color: var(--accent); color: var(--text); }
-.theme-toggle { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
-.theme-toggle:hover { color: var(--text); }
+.theme-toggle { appearance: none; display: inline-grid; flex: none; place-items: center; width: 1.7rem; height: 1.7rem; margin: 0; padding: 0; border: 0; background: transparent; color: var(--muted); line-height: 0; cursor: pointer; }
+.theme-toggle:hover { border: 0; background: transparent; color: var(--text); }
+.theme-toggle svg { grid-area: 1 / 1; width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 [data-theme="dark"] .icon-sun, [data-theme="light"] .icon-moon { display: none; }
 main { min-height: calc(100svh - 12rem); }
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: clamp(4rem, 8vw, 6rem); padding: 1.5rem 0; border-top: 1px solid var(--line); color: var(--muted); font: .875rem var(--sans); }
