@@ -23,9 +23,12 @@ body {
   margin: 0;
   color: var(--text);
   background: var(--bg) url("/assets/kozo.webp") fixed center / cover no-repeat;
-  background-blend-mode: light-dark(multiply, color-burn);
   font: 1rem/1.6 var(--serif);
 }
+@media (prefers-color-scheme: light) { body { background-blend-mode: multiply; } }
+@media (prefers-color-scheme: dark) { body { background-blend-mode: color-burn; } }
+[data-theme="light"] body { background-blend-mode: multiply; }
+[data-theme="dark"] body { background-blend-mode: color-burn; }
 a { color: inherit; text-underline-offset: .18em; }
 a:hover { color: var(--accent-hover); }
 button, input { font: inherit; }
