@@ -18,19 +18,27 @@ function layout(config: AppConfig, title: string, content: string): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f3e8">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1e1510">
+  <meta name="color-scheme" content="light dark">
   <title>${escapeHtml(title)} · Shibumi Forms</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <script src="/assets/theme.js"></script>
   <link rel="stylesheet" href="/assets/styles.css">
   ${turnstileScript}
 </head>
 <body>
-  <header class="site-header">
-    <a class="wordmark" href="/" aria-label="Shibumi Forms home"><span aria-hidden="true">◉</span> Shibumi Forms</a>
-  </header>
-  <main>${content}</main>
-  <footer>
-    <span>Quiet infrastructure for static sites.</span>
-    <nav aria-label="Policies"><a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a></nav>
-  </footer>
+  <div class="shell">
+    <header class="site-header">
+      <a class="mark" href="/" aria-label="Shibumi Forms home"><img src="/assets/favicon.png" alt=""><span>shibumi<span class="mark-tld"> forms</span></span></a>
+      <nav aria-label="Primary"><a href="https://shibumistack.dev">Stack</a><a href="/login">Sign in</a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme"><span class="icon-sun" aria-hidden="true">☀</span><span class="icon-moon" aria-hidden="true">◐</span></button></nav>
+    </header>
+    <main>${content}</main>
+    <footer class="site-footer">
+      <span>Quiet infrastructure for static sites.</span>
+      <nav aria-label="Policies"><a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a></nav>
+    </footer>
+  </div>
 </body>
 </html>`;
 }
