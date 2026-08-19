@@ -8,6 +8,8 @@
   --accent: light-dark(#ff6600, #ff8833);
   --accent-soft: light-dark(rgb(255 102 0 / 10%), rgb(255 136 51 / 15%));
   --accent-hover: light-dark(#e55a00, #ffa055);
+  --success: light-dark(#397a43, #74c77a);
+  --success-soft: light-dark(rgb(57 122 67 / 10%), rgb(116 199 122 / 15%));
   --danger: light-dark(#a13b2c, #e36c59);
   --max: 1120px;
   --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -104,7 +106,7 @@ button:hover, .button-link:hover { border-color: var(--accent-hover); background
 .status-mark { float: right; display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
 .workspace { padding: clamp(2rem, 6vw, 5rem) 0; }
 .workspace-title { display: flex; align-items: end; justify-content: space-between; gap: 2rem; padding: 2rem 0 3rem; border-bottom: 1px solid var(--line); }
-.workspace-title h1 { font-size: clamp(3.5rem, 8vw, 7rem); }
+.workspace-title h1 { font-size: clamp(2.5rem, 4vw, 4rem); }
 .workspace-title > p { color: var(--muted); font-family: var(--sans); }
 .admin-title { align-items: center; padding-bottom: clamp(2.5rem, 5vw, 4rem); }
 .admin-title h1 { font-size: clamp(4rem, 8vw, 6.5rem); }
@@ -175,6 +177,7 @@ button:hover, .button-link:hover { border-color: var(--accent-hover); background
 .setup-heading p:last-child { margin: .8rem 0 0; color: var(--muted); }
 .endpoint-status { display: flex; align-items: center; gap: .6rem; padding: .5rem .75rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: .72rem var(--sans); }
 .endpoint-status i { width: .45rem; height: .45rem; border-radius: 50%; background: var(--accent); }
+.endpoint-status.active i { background: var(--success); box-shadow: 0 0 0 4px var(--success-soft); }
 .endpoint-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; border: 1px solid var(--line); border-radius: 12px; background: var(--quiet); }
 .endpoint-bar > div { min-width: 0; }
 .endpoint-bar span { display: block; margin-bottom: .25rem; color: var(--muted); font: .65rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
@@ -231,7 +234,7 @@ dialog > form, dialog > .fine-print { margin: 1.5rem 2rem; }
   .mark-tld { display: none; }
   .site-header nav > a:first-child { display: none; }
   .panel { padding: 1.35rem; border-radius: 16px; }
-  .workspace-title h1 { font-size: 3.5rem; }
+  .workspace-title h1 { font-size: 2.75rem; }
   .forms-grid { grid-template-columns: 1fr; }
   .account-chip { max-width: 100%; }
   .endpoint-bar { align-items: stretch; flex-direction: column; }
