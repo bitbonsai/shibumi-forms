@@ -173,10 +173,14 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     const fingerprint = await hmac(config.sessionSecret, `request:${requestSource(context, config)}:${email}:${new Date().toISOString().slice(0, 10)}`);
     if (!limiter.allows(rateKey) || !limiter.allows(fingerprint, 20)) return context.html(checkEmailView(config));
 
+    // Sign-in for an unknown address sends an account-creation link instead of
+    // silently dropping the request. The on-site response stays identical.
+    let signup = false;
     if (!registration) {
       const exists = database.query<{ found: number }, [string]>("SELECT 1 AS found FROM users WHERE email_normalized = ?").get(email);
-      if (!exists) return context.html(checkEmailView(config));
+      signup = !exists;
     }
+    const storedPurpose = registration || signup ? "register" : "login";
 
     const id = crypto.randomUUID();
     const token = randomToken();
@@ -185,17 +189,17 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     const expiresAt = new Date(createdAt.getTime() + MAGIC_LINK_MINUTES * 60_000);
 
     database.transaction(() => {
-      database.query("DELETE FROM magic_links WHERE email_normalized = ? AND purpose = ? AND consumed_at IS NULL").run(email, purpose);
+      database.query("DELETE FROM magic_links WHERE email_normalized = ? AND purpose = ? AND consumed_at IS NULL").run(email, storedPurpose);
       database.query(`
         INSERT INTO magic_links (id, email, email_normalized, token_hash, purpose, pending_page_url, terms_version, expires_at, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(id, enteredEmail, email, tokenHash, purpose, page?.href || null, registration ? config.termsVersion : null, expiresAt.toISOString(), createdAt.toISOString());
+      `).run(id, enteredEmail, email, tokenHash, storedPurpose, page?.href || null, registration ? config.termsVersion : null, expiresAt.toISOString(), createdAt.toISOString());
     })();
 
     const confirmUrl = new URL("/auth/confirm", config.publicUrl);
     confirmUrl.searchParams.set("token", token);
     try {
-      await mailer.sendMagicLink({ id, to: enteredEmail, confirmUrl: confirmUrl.href, expiresMinutes: MAGIC_LINK_MINUTES, hostname: page?.hostname });
+      await mailer.sendMagicLink({ id, to: enteredEmail, confirmUrl: confirmUrl.href, expiresMinutes: MAGIC_LINK_MINUTES, hostname: page?.hostname, variant: signup ? "create-account" : "signin" });
     } catch (error) {
       console.error(JSON.stringify({ event: "email_failed", messageId: id, error: error instanceof Error ? error.name : "Error" }));
     }
@@ -206,13 +210,14 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     const token = context.req.query("token") || "";
     if (!TOKEN_PATTERN.test(token)) return context.html(invalidLinkView(config), 400);
     const tokenHash = await sha256(token);
-    const row = database.query<{ pending_page_url: string | null }, [string, string]>(`
-      SELECT pending_page_url FROM magic_links
+    const row = database.query<{ pending_page_url: string | null; purpose: string; terms_version: string | null }, [string, string]>(`
+      SELECT pending_page_url, purpose, terms_version FROM magic_links
       WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?
     `).get(tokenHash, new Date().toISOString());
     if (!row) return context.html(invalidLinkView(config), 400);
     const hostname = row.pending_page_url ? new URL(row.pending_page_url).hostname : undefined;
-    return context.html(confirmView(config, token, hostname));
+    const needsTerms = row.purpose === "register" && !row.terms_version;
+    return context.html(confirmView(config, token, hostname, { needsTerms }));
   });
 
   app.post("/auth/confirm", async (context) => {
@@ -227,7 +232,17 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     const publicId = randomToken();
     const now = new Date();
     const remembered = stringField(body, "remember") === "yes";
+    const acceptedTerms = stringField(body, "accepted_terms") === "yes";
     const expiresAt = new Date(now.getTime() + (remembered ? REMEMBER_DAYS * 86_400_000 : SESSION_HOURS * 3_600_000));
+
+    // Account-creation links carry no terms consent; collect it here without consuming the link.
+    const pending = database.query<{ purpose: string; terms_version: string | null }, [string, string]>(`
+      SELECT purpose, terms_version FROM magic_links WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?
+    `).get(tokenHash, now.toISOString());
+    if (!pending) return context.html(invalidLinkView(config), 400);
+    if (pending.purpose === "register" && !pending.terms_version && !acceptedTerms) {
+      return context.html(confirmView(config, token, undefined, { needsTerms: true, error: "Accept the Terms to create your account." }), 400);
+    }
 
     try {
       database.transaction(() => {
@@ -240,12 +255,13 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
         if (consumed.changes !== 1) throw new Error("INVALID_LINK");
 
         let user = database.query<{ id: string }, [string]>("SELECT id FROM users WHERE email_normalized = ?").get(link.email_normalized);
-        if (!user && link.purpose === "register" && link.terms_version) {
+        const termsVersion = link.terms_version ?? (acceptedTerms ? config.termsVersion : null);
+        if (!user && link.purpose === "register" && termsVersion) {
           const userId = crypto.randomUUID();
           database.query(`
             INSERT INTO users (id, email, email_normalized, accepted_terms_at, terms_version, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
-          `).run(userId, link.email || link.email_normalized, link.email_normalized, now.toISOString(), link.terms_version, now.toISOString());
+          `).run(userId, link.email || link.email_normalized, link.email_normalized, now.toISOString(), termsVersion, now.toISOString());
           user = { id: userId };
         }
         if (!user) throw new Error("INVALID_LINK");

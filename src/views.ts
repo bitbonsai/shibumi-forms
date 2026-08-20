@@ -182,21 +182,28 @@ export function checkEmailView(config: AppConfig): string {
     <p class="step">02 / Verify</p>
     <div class="status-mark" aria-hidden="true"><i class="icon icon-arrow-up-right"></i></div>
     <h1>Check your email</h1>
-    <p>If the address can receive a sign-in link, it should arrive shortly. Link expires in 15 minutes.</p>
+    <p>If the address can receive email, a link should arrive shortly. It signs you in, or creates your account if you are new. Link expires in 15 minutes.</p>
     <p class="alternate"><a href="/login">Try another address</a></p>
   </div></section>`);
 }
 
-export function confirmView(config: AppConfig, token: string, hostname?: string): string {
+export function confirmView(config: AppConfig, token: string, hostname?: string, input: { needsTerms?: boolean; error?: string } = {}): string {
   const context = hostname ? ` for ${hostname}` : "";
-  return layout(config, "Confirm sign-in", `<section class="single-panel"><div class="panel result">
+  const creating = input.needsTerms === true;
+  const error = input.error ? `<p class="notice error" role="alert">${escapeHtml(input.error)}</p>` : "";
+  const terms = creating
+    ? `<label class="check"><input name="accepted_terms" type="checkbox" value="yes" required><span>I agree to the <a href="${escapeHtml(config.termsUrl.href)}">Terms</a> and accept responsibility for submission data.</span></label>`
+    : "";
+  return layout(config, creating ? "Create your account" : "Confirm sign-in", `<section class="single-panel"><div class="panel result">
     <p class="step">02 / Verify</p>
-    <h1>Confirm sign-in${escapeHtml(context)}</h1>
-    <p>This button signs you in. Link works once and expires after 15 minutes.</p>
+    <h1>${creating ? "Create your account" : `Confirm sign-in${escapeHtml(context)}`}</h1>
+    <p>${creating ? "This address has no account yet. This button creates one and signs you in." : "This button signs you in."} Link works once and expires after 15 minutes.</p>
+    ${error}
     <form action="/auth/confirm" method="post">
       <input type="hidden" name="token" value="${escapeHtml(token)}">
+      ${terms}
       <label class="check"><input name="remember" type="checkbox" value="yes"><span>Keep me signed in for 30 days on this device</span></label>
-      <button type="submit">Confirm and continue <span aria-hidden="true">→</span></button>
+      <button type="submit">${creating ? "Create account and continue" : "Confirm and continue"} <span aria-hidden="true">→</span></button>
     </form>
   </div></section>`);
 }

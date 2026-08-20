@@ -90,12 +90,42 @@ describe("magic-link authentication", () => {
     expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM sessions").get()!.count).toBe(1);
   });
 
-  test("unknown login returns same response without sending email", async () => {
-    const { app, mailer } = setup();
+  test("unknown login sends account-creation link and confirm requires terms", async () => {
+    const { app, mailer, database } = setup();
     const response = await app.request("/auth/magic-link", form({ purpose: "login", email: "unknown@example.com" }));
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain("If the address can receive a sign-in link");
-    expect(mailer.messages).toHaveLength(0);
+    expect(await response.text()).toContain("If the address can receive email");
+    expect(mailer.messages).toHaveLength(1);
+    expect(mailer.messages[0]!.variant).toBe("create-account");
+    const token = new URL(mailer.messages[0]!.confirmUrl).searchParams.get("token")!;
+
+    const page = await app.request(`/auth/confirm?token=${token}`);
+    expect(await page.text()).toContain("Create your account");
+
+    const withoutTerms = await app.request("/auth/confirm", form({ token }));
+    expect(withoutTerms.status).toBe(400);
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM users").get()!.count).toBe(0);
+    expect(database.query<{ consumed_at: string | null }, []>("SELECT consumed_at FROM magic_links").get()!.consumed_at).toBeNull();
+
+    const confirmed = await app.request("/auth/confirm", form({ token, accepted_terms: "yes" }));
+    expect(confirmed.status).toBe(303);
+    expect(confirmed.headers.get("location")).toBe("/admin");
+    const user = database.query<{ email: string; terms_version: string }, []>("SELECT email, terms_version FROM users").get()!;
+    expect(user.email).toBe("unknown@example.com");
+    expect(user.terms_version).toBe("1");
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM forms").get()!.count).toBe(0);
+  });
+
+  test("known login sends sign-in link without terms prompt", async () => {
+    const { app, mailer } = setup();
+    const registerToken = await requestRegistration(app, mailer);
+    await app.request("/auth/confirm", form({ token: registerToken }));
+    await app.request("/auth/magic-link", form({ purpose: "login", email: "person@example.com" }));
+    expect(mailer.messages).toHaveLength(2);
+    expect(mailer.messages[1]!.variant).toBe("signin");
+    const token = new URL(mailer.messages[1]!.confirmUrl).searchParams.get("token")!;
+    const page = await app.request(`/auth/confirm?token=${token}`);
+    expect(await page.text()).not.toContain("accepted_terms");
   });
 
   test("expired link cannot be confirmed", async () => {

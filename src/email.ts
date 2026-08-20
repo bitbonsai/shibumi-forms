@@ -8,6 +8,7 @@ export type MagicLinkEmail = {
   confirmUrl: string;
   expiresMinutes: number;
   hostname?: string;
+  variant?: "signin" | "create-account";
 };
 
 export interface Mailer {
@@ -35,17 +36,23 @@ export class ResendMailer implements Mailer {
   }
 
   async sendMagicLink(input: MagicLinkEmail): Promise<void> {
+    const creating = input.variant === "create-account";
     const context = input.hostname ? ` for ${input.hostname}` : "";
+    const subject = creating ? "Create your Shibumi Forms account" : `Confirm your Shibumi Forms sign-in${context}`;
+    const lead = creating
+      ? "You tried to sign in, but this address has no Shibumi Forms account yet. Confirm to create one."
+      : `Confirm your Shibumi Forms sign-in${context}.`;
+    const action = creating ? "Create account" : "Confirm sign-in";
     const text = [
-      `Confirm your Shibumi Forms sign-in${context}.`,
+      lead,
       "",
       input.confirmUrl,
       "",
       `This link expires in ${input.expiresMinutes} minutes.`,
       "If you did not request it, ignore this email.",
     ].join("\n");
-    const html = `<p>Confirm your Shibumi Forms sign-in${escapeHtml(context)}.</p>
-<p><a href="${escapeHtml(input.confirmUrl)}">Confirm sign-in</a></p>
+    const html = `<p>${escapeHtml(lead)}</p>
+<p><a href="${escapeHtml(input.confirmUrl)}">${escapeHtml(action)}</a></p>
 <p>This link expires in ${input.expiresMinutes} minutes.</p>
 <p>If you did not request it, ignore this email.</p>`;
 
@@ -53,7 +60,7 @@ export class ResendMailer implements Mailer {
       const { error } = await this.resend.emails.send({
         from: this.from,
         to: [input.to],
-        subject: `Confirm your Shibumi Forms sign-in${context}`,
+        subject,
         html,
         text,
       }, { idempotencyKey: `magic-link/${input.id}` });
