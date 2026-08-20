@@ -10,7 +10,10 @@ services:
       PORT: 3000
       DATABASE_PATH: /data/shibumi-forms.sqlite
     env_file:
-      - .env.production
+      - path: .env
+        required: false
+      - path: .env.production
+        required: false
     volumes:
       - forms-data:/data
     tmpfs:
