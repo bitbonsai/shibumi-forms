@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "provider": "shibumi-server",
+  "server": {
+    "hostname": "alpha"
+  },
+  "domain": "forms.shibumistack.dev",
+  "appId": "forms-shibumistack-dev",
+  "repository": "github:bitbonsai/shibumi-forms",
+  "branch": "main",
+  "webhookUrl": "https://forms.shibumistack.dev/hooks/github/forms-shibumistack-dev",
+  "service": "app",
+  "port": 9105,
+  "healthPath": "/readyz",
+  "deploymentMode": "prebuilt",
+  "platform": "linux/arm64",
+  "cutoverRequired": false,
+  "trigger": "ship"
+}
