@@ -23,7 +23,8 @@ export function security(config: AppConfig): MiddlewareHandler<{ Variables: AppV
     context.header("X-Request-Id", requestId);
     context.header("X-Content-Type-Options", "nosniff");
     context.header("X-Frame-Options", "DENY");
-    context.header("Referrer-Policy", "no-referrer");
+    // "no-referrer" makes Chrome send Origin: null on same-origin form POSTs, breaking the sameOrigin CSRF check.
+    context.header("Referrer-Policy", "same-origin");
     context.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     const turnstile = config.turnstileSiteKey ? " https://challenges.cloudflare.com" : "";
     context.header("Content-Security-Policy", `default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'${turnstile}; frame-src 'self'${turnstile}; connect-src 'self'${turnstile}; style-src 'self'`);

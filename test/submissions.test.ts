@@ -105,7 +105,7 @@ describe("public submission endpoint", () => {
 
   test("renders inert submission details and authorizes deletion", async () => {
     const { app, database } = setup();
-    database.query("INSERT INTO submissions VALUES (?, ?, ?, ?)").run("submission-1", "form-1", JSON.stringify({ name: "Ada", attack: "<img src=x onerror=alert(1)>", formula: "=cmd" }), new Date().toISOString());
+    database.query("INSERT INTO submissions (id, form_id, payload_json, created_at) VALUES (?, ?, ?, ?)").run("submission-1", "form-1", JSON.stringify({ name: "Ada", attack: "<img src=x onerror=alert(1)>", formula: "=cmd" }), new Date().toISOString());
     const token = await addSession(database, "user-1", 6);
     const cookie = `shibumi_forms_session=${token}`;
     const page = await app.request("/admin/forms/form-1", { headers: { cookie } });

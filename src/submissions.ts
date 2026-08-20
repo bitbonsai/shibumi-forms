@@ -5,6 +5,7 @@ import type { AppDatabase } from "./database";
 import { formView } from "./views";
 
 const HONEYPOT = "website";
+const PAGE_SIZE = 12;
 const MAX_FIELDS = 64;
 const MAX_NAME = 100;
 const MAX_VALUE_BYTES = 10 * 1024;
@@ -188,28 +189,22 @@ export function registerSubmissionRoutes(app: Hono<AuthEnv>, config: AppConfig, 
       WHERE forms.id = ? AND forms.user_id = ? GROUP BY forms.id
     `).get(context.req.param("id"), context.get("user").id);
     if (!form) return context.json({ error: "Not found" }, 404);
-    let cursor: [string, string] | undefined;
-    try {
-      const raw = context.req.query("cursor");
-      if (raw) cursor = JSON.parse(Buffer.from(raw, "base64url").toString());
-      if (cursor && (cursor.length !== 2 || !cursor.every((value) => typeof value === "string"))) throw new Error();
-    } catch { return context.json({ error: "Invalid cursor" }, 400); }
-    const rows = cursor
-      ? database.query<{ id: string; payload_json: string; created_at: string }, [string, string, string, string, number]>(`SELECT id, payload_json, created_at FROM submissions WHERE form_id = ? AND (created_at < ? OR (created_at = ? AND id < ?)) ORDER BY created_at DESC, id DESC LIMIT ?`).all(form.id, cursor[0], cursor[0], cursor[1], 51)
-      : database.query<{ id: string; payload_json: string; created_at: string }, [string, number]>("SELECT id, payload_json, created_at FROM submissions WHERE form_id = ? ORDER BY created_at DESC, id DESC LIMIT ?").all(form.id, 51);
-    const more = rows.length > 50;
-    if (more) rows.pop();
+    const totalPages = Math.max(1, Math.ceil(form.submission_count / PAGE_SIZE));
+    const rawPage = context.req.query("page");
+    if (rawPage && !/^\d{1,6}$/.test(rawPage)) return context.json({ error: "Invalid page" }, 400);
+    const page = Math.min(totalPages, Math.max(1, Number(rawPage) || 1));
+    const rows = database.query<{ id: string; payload_json: string; created_at: string; note: string | null }, [string, number, number]>(
+      "SELECT id, payload_json, created_at, note FROM submissions WHERE form_id = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+    ).all(form.id, PAGE_SIZE, (page - 1) * PAGE_SIZE);
     const submissions = rows.map((row) => {
       let payload: Record<string, string | string[]>;
       try { payload = JSON.parse(row.payload_json); } catch { payload = { error: "Stored submission is unreadable" }; }
-      return { id: row.id, createdAt: row.created_at, payload };
+      return { id: row.id, createdAt: row.created_at, payload, note: row.note };
     });
     const columns = [...new Set(submissions.flatMap(({ payload }) => Object.keys(payload)))].slice(0, 6);
-    const last = rows.at(-1);
-    const next = more && last ? Buffer.from(JSON.stringify([last.created_at, last.id])).toString("base64url") : undefined;
     const endpoint = new URL(`/f/${form.public_id}`, config.publicUrl).href;
     const csrf = await csrfToken(config, context.get("session").token);
-    return context.html(formView(config, form, endpoint, HONEYPOT, csrf, submissions, columns, next));
+    return context.html(formView(config, form, endpoint, HONEYPOT, csrf, submissions, columns, page, totalPages));
   });
 
   async function mutation(context: Context<AuthEnv>) {
@@ -219,6 +214,16 @@ export function registerSubmissionRoutes(app: Hono<AuthEnv>, config: AppConfig, 
       && await validCsrf(config, context.get("session").token, candidate);
     return { body, valid };
   }
+
+  app.post("/admin/forms/:formId/submissions/:id/note", async (context) => {
+    const result = await mutation(context);
+    if (!result.valid) return context.json({ error: "Invalid request" }, 403);
+    const note = typeof result.body.note === "string" ? result.body.note.trim() : "";
+    if (note.length > 2000) return context.json({ error: "Note is too long" }, 400);
+    database.query(`UPDATE submissions SET note = ? WHERE id = ? AND form_id IN (SELECT id FROM forms WHERE id = ? AND user_id = ?)`)
+      .run(note || null, context.req.param("id"), context.req.param("formId"), context.get("user").id);
+    return context.redirect(`/admin/forms/${context.req.param("formId")}`, 303);
+  });
 
   app.post("/admin/forms/:formId/submissions/:id/delete", async (context) => {
     if (!(await mutation(context)).valid) return context.json({ error: "Invalid request" }, 403);

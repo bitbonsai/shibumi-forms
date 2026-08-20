@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrate, openDatabase } from "../src/database";
@@ -25,7 +25,8 @@ describe("database migrations", () => {
 
     const second = openDatabase(path);
     migrate(second);
-    expect(second.query<{ count: number }, []>("SELECT count(*) AS count FROM schema_migrations").get()?.count).toBe(2);
+    const migrationCount = readdirSync(join(import.meta.dir, "..", "migrations")).filter((name) => /^\d+.*\.sql$/.test(name)).length;
+    expect(second.query<{ count: number }, []>("SELECT count(*) AS count FROM schema_migrations").get()?.count).toBe(migrationCount);
     expect(second.query<{ email: string }, []>("SELECT email FROM users WHERE id = 'user-1'").get()?.email)
       .toBe("test@example.com");
     second.close();
