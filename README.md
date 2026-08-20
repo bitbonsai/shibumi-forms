@@ -59,7 +59,7 @@ Health endpoints:
 
 ## Container
 
-Set every value in `.env`, including HTTPS public and policy URLs, then run:
+Set every value in `.env.production`, including HTTPS public and policy URLs, then run:
 
 ```sh
 docker compose up --build -d
@@ -71,7 +71,7 @@ Service binds to `127.0.0.1:9001` by default. Put TLS reverse proxy in front. SQ
 
 See `.env.example`. Startup rejects missing fields, weak session secrets, missing Resend credentials, partial Turnstile configuration, invalid URLs, and non-HTTPS production URLs.
 
-Never commit `.env`, SQLite files, backups, API keys, or real account data.
+Never commit `.env`, `.env.production`, SQLite files, backups, API keys, or real account data.
 
 ## Plans
 
