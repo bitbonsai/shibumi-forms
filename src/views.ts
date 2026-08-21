@@ -180,13 +180,14 @@ export function loginView(config: AppConfig, input: { email?: string; error?: st
   </section>`);
 }
 
-export function checkEmailView(config: AppConfig): string {
+export function checkEmailView(config: AppConfig, email?: string): string {
+  const destination = email ? `We sent a link to <strong class="sent-to">${escapeHtml(email)}</strong>.` : "We sent you a link.";
   return layout(config, "Check your email", `<section class="single-panel"><div class="panel result">
     <p class="step">02 / Verify</p>
-    <div class="status-mark" aria-hidden="true"><i class="icon icon-arrow-up-right"></i></div>
+    <div class="status-mark" aria-hidden="true"><i class="icon icon-send"></i></div>
     <h1>Check your email</h1>
-    <p>If the address can receive email, a link should arrive shortly. It signs you in, or creates your account if you are new. Link expires in 15 minutes.</p>
-    <p class="alternate"><a href="/login">Try another address</a></p>
+    <p>${destination} Open it within 15 minutes.</p>
+    <p class="alternate"><a class="ghost-link" href="/login">Try another address</a></p>
   </div></section>`);
 }
 

@@ -171,7 +171,7 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
 
     const rateKey = await hmac(config.sessionSecret, `magic-link:${email}`);
     const fingerprint = await hmac(config.sessionSecret, `request:${requestSource(context, config)}:${email}:${new Date().toISOString().slice(0, 10)}`);
-    if (!limiter.allows(rateKey) || !limiter.allows(fingerprint, 20)) return context.html(checkEmailView(config));
+    if (!limiter.allows(rateKey) || !limiter.allows(fingerprint, 20)) return context.html(checkEmailView(config, enteredEmail));
 
     // Sign-in for an unknown address sends an account-creation link instead of
     // silently dropping the request. The on-site response stays identical.
@@ -203,7 +203,7 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     } catch (error) {
       console.error(JSON.stringify({ event: "email_failed", messageId: id, error: error instanceof Error ? error.name : "Error" }));
     }
-    return context.html(checkEmailView(config));
+    return context.html(checkEmailView(config, enteredEmail));
   });
 
   app.get("/auth/confirm", async (context) => {

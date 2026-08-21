@@ -94,7 +94,7 @@ describe("magic-link authentication", () => {
     const { app, mailer, database } = setup();
     const response = await app.request("/auth/magic-link", form({ purpose: "login", email: "unknown@example.com" }));
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain("If the address can receive email");
+    expect(await response.text()).toContain("We sent a link to <strong class=\"sent-to\">unknown@example.com</strong>");
     expect(mailer.messages).toHaveLength(1);
     expect(mailer.messages[0]!.variant).toBe("create-account");
     const token = new URL(mailer.messages[0]!.confirmUrl).searchParams.get("token")!;
