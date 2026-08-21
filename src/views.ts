@@ -137,7 +137,7 @@ export function registrationView(config: AppConfig, input: { email?: string; pag
     <div class="intro">
       <p class="eyebrow">Easy, free, no strings attached</p>
       <h1>Forms for<br>static sites.</h1>
-      <p class="lede">One URL for your form. One dashboard for its data.</p>
+      <p class="lede">Point your HTML form at one URL and every submission lands in a private dashboard, ready to read, export, or delete.</p>
       <div class="signal" aria-hidden="true"><span>your form</span><i></i><span>one endpoint</span></div>
     </div>
     <div class="panel">
