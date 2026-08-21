@@ -25,7 +25,7 @@ const SERVER_HOSTNAME = /^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/;
 const COMMIT = /^[a-f0-9]{40}$/;
 const SERVER_CLI = "~/.local/bin/shibumi-server";
 const LATEST_SOURCE = "https://shibumistack.dev/ship/latest.ts";
-const CURRENT_SOURCE = "https://shibumistack.dev/ship/v36.ts";
+const CURRENT_SOURCE = "https://shibumistack.dev/ship/v37.ts";
 let sshControlDirectory: string | undefined;
 let sshControlTarget: string | undefined;
 const accent = (value: string) => process.stdout.isTTY && !("NO_COLOR" in process.env) && process.env.TERM !== "dumb"
@@ -389,13 +389,6 @@ async function githubBranchIsProtected(config: ClientConfig): Promise<boolean> {
 
 export function deploymentModeForTrigger(trigger: ClientConfig["trigger"]): ClientConfig["deploymentMode"] {
   return trigger === "ship" ? "prebuilt" : "build";
-}
-
-export function shipConfirmation(mode: ClientConfig["deploymentMode"], ahead: number, branch: string, domain: string): string {
-  if (mode === "prebuilt") return ahead > 0
-    ? `Build and upload image, then push ${branch} to deploy ${domain}?`
-    : `Build and upload image, then redeploy current ${branch} commit to ${domain}?`;
-  return ahead > 0 ? `Push ${branch} and deploy ${domain}?` : `Redeploy current ${branch} commit to ${domain}?`;
 }
 
 export function repositoryFromRemote(remote: string): string {
@@ -1377,10 +1370,6 @@ export async function runShip(): Promise<void> {
     const estimateMs = await estimatedDeployDuration(result.config, result.target);
     const startedAt = Date.now();
     const ahead = await preflight(result.config);
-    if (!await approve(shipConfirmation(result.config.deploymentMode, ahead, result.config.branch, result.config.domain))) {
-      cancel("Ship cancelled");
-      return;
-    }
     const commit = await git("rev-parse", "HEAD");
     if (!COMMIT.test(commit)) throw new Error("cannot determine shipped commit");
     await buildAndUpload(result.config, result.target, commit, compose);
