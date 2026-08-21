@@ -60,12 +60,15 @@ function layout(config: AppConfig, title: string, content: string, admin = false
   <div class="shell">
     <header class="site-header">
       <a class="mark" href="/" aria-label="Shibumi Forms home"><img src="/assets/favicon.png" alt=""><span>shibumi<span class="mark-tld"> forms</span></span></a>
-      <nav aria-label="Primary"><a href="https://shibumistack.dev">Shibumi Stack</a><a href="${admin ? "/admin" : "/login"}">${admin ? "Account" : "Sign in"}</a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></nav>
+      <nav aria-label="Primary"><a href="https://shibumistack.dev">Shibumi Stack</a><a href="${admin ? "/admin" : "/login"}">${admin ? "Account" : "Sign in"}</a><a class="nav-icon" href="https://github.com/bitbonsai/shibumi-forms" aria-label="Source on GitHub"><i class="icon icon-github"></i></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></nav>
     </header>
     <main>${content}${admin ? '<script src="/assets/admin.js" defer></script>' : ""}</main>
     <footer class="site-footer">
-      <span>Simple infrastructure for static sites.</span>
-      <nav aria-label="Policies"><a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a></nav>
+      <div class="footer-line">
+        <span>Simple infrastructure for static sites.</span>
+        <nav aria-label="Policies"><a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a></nav>
+      </div>
+      <p class="footer-meta">MIT License &copy; 2026 Shibumi Forms &middot; Made with <svg class="footer-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="sr-only">love</span> by <a href="https://bitbonsai.com">@bitbonsai</a></p>
     </footer>
   </div>
 </body>
@@ -134,7 +137,7 @@ export function registrationView(config: AppConfig, input: { email?: string; pag
     <div class="intro">
       <p class="eyebrow">Easy, free, no strings attached</p>
       <h1>Forms for<br>static sites.</h1>
-      <p class="lede">One URL for your form. One dashboard for everything it collects.</p>
+      <p class="lede">One URL for your form. One dashboard for its data.</p>
       <div class="signal" aria-hidden="true"><span>your form</span><i></i><span>one endpoint</span></div>
     </div>
     <div class="panel">
