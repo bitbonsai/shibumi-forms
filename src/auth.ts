@@ -23,7 +23,7 @@ type MagicLinkRow = {
   id: string;
   email: string | null;
   email_normalized: string;
-  purpose: "register" | "login";
+  purpose: "register" | "login" | "delete";
   pending_page_url: string | null;
   terms_version: string | null;
 };
@@ -181,7 +181,10 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
 
     const rateKey = await hmac(config.sessionSecret, `magic-link:${email}`);
     const fingerprint = await hmac(config.sessionSecret, `request:${requestSource(context, config)}:${email}:${new Date().toISOString().slice(0, 10)}`);
-    if (!limiter.allows(rateKey) || !limiter.allows(fingerprint, 20)) return context.html(checkEmailView(config, enteredEmail));
+    if (!limiter.allows(rateKey) || !limiter.allows(fingerprint, 20)) {
+      console.log(JSON.stringify({ event: "rate_limited", route: "auth" }));
+      return context.html(checkEmailView(config, enteredEmail));
+    }
 
     // Global daily email budget: over budget, render the same neutral view
     // (no enumeration) but send nothing. Rows in magic_links proxy for sends.
@@ -236,7 +239,7 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     if (!row) return context.html(invalidLinkView(config), 400);
     const hostname = row.pending_page_url ? new URL(row.pending_page_url).hostname : undefined;
     const needsTerms = row.purpose === "register" && !row.terms_version;
-    return context.html(confirmView(config, token, hostname, { needsTerms }));
+    return context.html(confirmView(config, token, hostname, { needsTerms, deleting: row.purpose === "delete" }));
   });
 
   app.post("/auth/confirm", async (context) => {
@@ -268,6 +271,7 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
       return context.html(confirmView(config, token, undefined, { needsTerms: true, error: "Accept the Terms to create your account." }), 400);
     }
 
+    let accountDeleted = false;
     try {
       database.transaction(() => {
         const link = database.query<MagicLinkRow, [string, string]>(`
@@ -277,6 +281,14 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
         if (!link) throw new Error("INVALID_LINK");
         const consumed = database.query("UPDATE magic_links SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL").run(now.toISOString(), link.id);
         if (consumed.changes !== 1) throw new Error("INVALID_LINK");
+
+        if (link.purpose === "delete") {
+          const target = database.query<{ id: string }, [string]>("SELECT id FROM users WHERE email_normalized = ?").get(link.email_normalized);
+          if (!target) throw new Error("INVALID_LINK");
+          database.query("DELETE FROM users WHERE id = ?").run(target.id);
+          accountDeleted = true;
+          return;
+        }
 
         let user = database.query<{ id: string }, [string]>("SELECT id FROM users WHERE email_normalized = ?").get(link.email_normalized);
         const termsVersion = link.terms_version ?? (acceptedTerms ? config.termsVersion : null);
@@ -308,6 +320,11 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     } catch (error) {
       if (error instanceof Error && error.message === "INVALID_LINK") return context.html(invalidLinkView(config), 400);
       throw error;
+    }
+
+    if (accountDeleted) {
+      deleteCookie(context, sessionCookieName(config), { path: "/", secure: config.environment === "production" });
+      return context.redirect("/", 303);
     }
 
     setCookie(context, sessionCookieName(config), sessionToken, {
@@ -404,13 +421,35 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     return context.redirect(`/admin/forms/${id}`, 303);
   });
 
+  // Typed email is the first gate; actual deletion requires clicking a fresh
+  // emailed link, so a stolen session alone cannot destroy the account.
   app.post("/admin/account/delete", async (context) => {
     const result = await mutation(context);
     if (!result.valid) return context.json({ error: "Invalid request" }, 403);
-    if (stringField(result.body, "confirmation") !== context.get("user").email) return context.json({ error: "Confirmation does not match" }, 400);
-    database.query("DELETE FROM users WHERE id = ?").run(context.get("user").id);
-    deleteCookie(context, sessionCookieName(config), { path: "/", secure: config.environment === "production" });
-    return context.redirect("/", 303);
+    const user = context.get("user");
+    if (stringField(result.body, "confirmation") !== user.email) return context.json({ error: "Confirmation does not match" }, 400);
+    const email = normalizeEmail(user.email);
+    if (!email) return context.json({ error: "Invalid request" }, 400);
+    const id = crypto.randomUUID();
+    const token = randomToken();
+    const tokenHash = await sha256(token);
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + MAGIC_LINK_MINUTES * 60_000);
+    database.transaction(() => {
+      database.query("DELETE FROM magic_links WHERE email_normalized = ? AND purpose = 'delete' AND consumed_at IS NULL").run(email);
+      database.query(`
+        INSERT INTO magic_links (id, email, email_normalized, token_hash, purpose, expires_at, created_at)
+        VALUES (?, ?, ?, ?, 'delete', ?, ?)
+      `).run(id, user.email, email, tokenHash, expiresAt.toISOString(), createdAt.toISOString());
+    })();
+    const confirmUrl = new URL("/auth/confirm", config.publicUrl);
+    confirmUrl.searchParams.set("token", token);
+    try {
+      await mailer.sendMagicLink({ id, to: user.email, confirmUrl: confirmUrl.href, expiresMinutes: MAGIC_LINK_MINUTES, variant: "delete-account" });
+    } catch (error) {
+      console.error(JSON.stringify({ event: "email_failed", messageId: id, error: error instanceof Error ? error.name : "Error" }));
+    }
+    return context.html(checkEmailView(config, user.email));
   });
 
   app.post("/admin/sessions/revoke-others", async (context) => {

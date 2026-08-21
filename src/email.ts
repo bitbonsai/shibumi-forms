@@ -8,7 +8,7 @@ export type MagicLinkEmail = {
   confirmUrl: string;
   expiresMinutes: number;
   hostname?: string;
-  variant?: "signin" | "create-account";
+  variant?: "signin" | "create-account" | "delete-account";
 };
 
 export interface Mailer {
@@ -17,17 +17,22 @@ export interface Mailer {
 
 export function renderMagicLinkEmail(input: MagicLinkEmail): { subject: string; text: string; html: string } {
   const creating = input.variant === "create-account";
+  const deleting = input.variant === "delete-account";
   const context = input.hostname ? ` for ${input.hostname}` : "";
-  const subject = creating ? "Create your Shibumi Forms account" : `Confirm your Shibumi Forms sign-in${context}`;
-  const heading = creating ? "Create your account" : `Confirm your sign-in${context}`;
-  const lead = creating
-    ? "You tried to sign in, but this address has no Shibumi Forms account yet. Confirm to create one."
-    : "One tap and you are back in your forms workspace.";
-  const action = creating ? "Create account" : "Confirm sign-in";
+  const subject = deleting ? "Confirm Shibumi Forms account deletion"
+    : creating ? "Create your Shibumi Forms account" : `Confirm your Shibumi Forms sign-in${context}`;
+  const heading = deleting ? "Delete your account"
+    : creating ? "Create your account" : `Confirm your sign-in${context}`;
+  const lead = deleting
+    ? "You asked to delete your Shibumi Forms account. Confirming removes your forms and submissions permanently."
+    : creating
+      ? "You tried to sign in, but this address has no Shibumi Forms account yet. Confirm to create one."
+      : "One tap and you are back in your forms workspace.";
+  const action = deleting ? "Confirm deletion" : creating ? "Create account" : "Confirm sign-in";
   const finePrint = `This link works once and expires in ${input.expiresMinutes} minutes. If you did not request it, ignore this email.`;
 
   const text = [
-    creating ? lead : `Confirm your Shibumi Forms sign-in${context}.`,
+    creating || deleting ? lead : `Confirm your Shibumi Forms sign-in${context}.`,
     "",
     input.confirmUrl,
     "",
@@ -52,7 +57,7 @@ export function renderMagicLinkEmail(input: MagicLinkEmail): { subject: string; 
       <span style="font-family:${sans};font-size:16px;font-weight:600;color:#252116;">shibumi</span><span style="font-family:${sans};font-size:16px;color:#a89f8d;"> forms</span>
     </td></tr>
     <tr><td style="background:#fdfbf3;border:1px solid #e5dfd0;border-radius:16px;padding:36px 40px;">
-      <p style="margin:0 0 20px;font-family:${mono};font-size:11px;font-weight:700;letter-spacing:3px;color:#ff6600;">${creating ? "01 / CREATE" : "02 / VERIFY"}</p>
+      <p style="margin:0 0 20px;font-family:${mono};font-size:11px;font-weight:700;letter-spacing:3px;color:#ff6600;">${deleting ? "CONFIRM / DELETE" : creating ? "01 / CREATE" : "02 / VERIFY"}</p>
       <h1 style="margin:0 0 12px;font-family:${serif};font-weight:400;font-size:30px;line-height:1.1;letter-spacing:-.5px;color:#252116;">${escapeHtml(heading)}</h1>
       <p style="margin:0 0 28px;font-family:${serif};font-size:16px;line-height:1.6;color:#7a6f5d;">${escapeHtml(lead)}</p>
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>

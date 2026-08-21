@@ -1,0 +1,4 @@
+Contact: mailto:info@shibumistack.dev
+Expires: 2027-08-21T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://forms.shibumistack.dev/.well-known/security.txt

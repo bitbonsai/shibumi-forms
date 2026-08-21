@@ -14,6 +14,7 @@ export function createApp(config: AppConfig, database: AppDatabase, mailer: Mail
   app.use("*", security(config));
   app.use("*", bodyLimit({ maxSize: 64 * 1024, onError: (context) => context.json({ error: "Request body too large" }, 413) }));
   app.use("/assets/*", serveStatic({ root: "./public" }));
+  app.use("/.well-known/*", serveStatic({ root: "./public" }));
 
   app.get("/healthz", (context) => context.json({ ok: true }));
 

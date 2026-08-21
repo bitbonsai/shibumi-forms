@@ -72,7 +72,7 @@ function layout(config: AppConfig, title: string, content: string, admin = false
     <footer class="site-footer">
       <div class="footer-line">
         <span>Simple infrastructure for static sites.</span>
-        <nav aria-label="Policies"><a href="/about">About</a><a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a></nav>
+        <nav aria-label="Policies"><a href="/about">About</a><a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a><a href="mailto:info@shibumistack.dev">Report abuse</a></nav>
       </div>
       <p class="footer-meta">MIT License &copy; 2026 Shibumi Forms &middot; Made with <svg class="footer-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="sr-only">love</span> by <a href="https://bitbonsai.com">@bitbonsai</a></p>
     </footer>
@@ -189,7 +189,7 @@ export function aboutView(config: AppConfig, signedIn = false): string {
       <p>Understated beauty through restraint. Shibumi Forms is part of <a href="https://shibumistack.dev">Shibumi Stack</a>, tools built on the idea that most software gets better by getting smaller.</p>
     </aside>
     <p class="about-cta">${cta}</p>
-    <p class="fine-print about-footnote">* The hosted service is free to use and runs on donations. If an endpoint attracts abuse or unusual load, we may pause it while we work out a fix.</p>
+    <p class="fine-print about-footnote">* The hosted service is free to use and runs on donations. If an endpoint attracts abuse or unusual load, we may pause it while we work out a fix. Report abuse to <a href="mailto:info@shibumistack.dev">info@shibumistack.dev</a>.</p>
     <details class="donate">
       <summary><span>Donations to keep the service free are always welcome</span><i class="icon icon-hand-heart" aria-hidden="true"></i></summary>
       <div class="donate-links">
@@ -232,10 +232,22 @@ export function checkEmailView(config: AppConfig, email?: string): string {
   </div></section>`);
 }
 
-export function confirmView(config: AppConfig, token: string, hostname?: string, input: { needsTerms?: boolean; error?: string } = {}): string {
+export function confirmView(config: AppConfig, token: string, hostname?: string, input: { needsTerms?: boolean; error?: string; deleting?: boolean } = {}): string {
   const context = hostname ? ` for ${hostname}` : "";
   const creating = input.needsTerms === true;
   const error = input.error ? `<p class="notice error" role="alert">${escapeHtml(input.error)}</p>` : "";
+  if (input.deleting) {
+    return layout(config, "Delete your account", `<section class="single-panel"><div class="panel result">
+    <h1>Delete your account</h1>
+    <p>This permanently deletes your account with every form and submission in it. The link works once and expires after 15 minutes.</p>
+    ${error}
+    <form action="/auth/confirm" method="post">
+      <input type="hidden" name="token" value="${escapeHtml(token)}">
+      <button class="danger" type="submit">Delete my account</button>
+    </form>
+    <p class="alternate">Changed your mind? Ignore this page and the link expires on its own.</p>
+  </div></section>`);
+  }
   const terms = creating
     ? `<label class="check"><input name="accepted_terms" type="checkbox" value="yes" required><span>I agree to the <a href="${escapeHtml(config.termsUrl.href)}">Terms</a> and accept responsibility for submission data.</span></label>`
     : "";
@@ -301,9 +313,9 @@ export function accountView(config: AppConfig, email: string, csrf: string, sess
         <article class="settings-card sessions-card"><header><div><h3>Active sessions</h3><p>${sessions.length} signed-in ${sessions.length === 1 ? "device" : "devices"}</p></div><span class="status-dot" aria-label="Active"></span></header><ul>${rows}</ul><form action="/admin/sessions/revoke-others" method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary" type="submit">Revoke other sessions</button></form></article>
         <article class="settings-card account-card"><div><h3>Account</h3><p class="account-email">${escapeHtml(email)}</p></div><form action="/auth/logout" method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary" type="submit">Sign out</button></form><details class="delete-account"><summary>Delete account</summary>
           <div class="delete-body">
-            <p>Permanently deletes all forms, submissions, and sessions for this account.</p>
+            <p>Permanently deletes all forms, submissions, and sessions for this account. We email you a confirmation link; deletion happens when you click it.</p>
             <div class="confirm-email"><span>Your account email</span><code id="delete-email">${escapeHtml(email)}</code><button class="icon-button" type="button" data-copy-target="delete-email" aria-label="Copy email"><i class="icon icon-copy"></i></button></div>
-            <form action="/admin/account/delete" method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label for="account-confirmation">Type your email to confirm</label><input id="account-confirmation" name="confirmation" autocomplete="off" placeholder="${escapeHtml(email)}" required><p class="fine-print">Deleted records may remain in encrypted backups for up to ${config.backupRetentionDays} days.</p><button class="danger" type="submit">Delete account</button></form>
+            <form action="/admin/account/delete" method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label for="account-confirmation">Type your email to confirm</label><input id="account-confirmation" name="confirmation" autocomplete="off" placeholder="${escapeHtml(email)}" required><p class="fine-print">Deleted records may remain in encrypted backups for up to ${config.backupRetentionDays} days.</p><button class="danger" type="submit">Email deletion link</button></form>
           </div></details></article>
       </div>
     </section>

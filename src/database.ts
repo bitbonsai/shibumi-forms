@@ -46,3 +46,13 @@ export function migrate(database: AppDatabase, directory = migrationsDirectory):
 export function checkDatabase(database: AppDatabase): boolean {
   return database.query<{ ok: number }, []>("SELECT 1 AS ok").get()?.ok === 1;
 }
+
+export function cleanupExpired(database: AppDatabase, now = new Date()): { magicLinks: number; sessions: number } {
+  // Magic links stay 48h past creation, not just past expiry: the daily email
+  // budget counts today's magic_links rows, so deleting them early would
+  // silently refill the budget.
+  const cutoff = new Date(now.getTime() - 48 * 3_600_000).toISOString();
+  const magicLinks = database.query("DELETE FROM magic_links WHERE created_at < ?").run(cutoff).changes;
+  const sessions = database.query("DELETE FROM sessions WHERE expires_at < ?").run(now.toISOString()).changes;
+  return { magicLinks, sessions };
+}

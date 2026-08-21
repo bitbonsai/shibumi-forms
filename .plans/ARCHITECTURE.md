@@ -228,9 +228,14 @@ Automated tests cover:
 
 Deployment proof covers empty-volume startup, repeat migration, restart persistence, image rollback compatibility, backup, and restore.
 
+## Accepted risks
+
+- **In-memory rate limiting:** counters reset on restart and do not share state across replicas. Accepted for the single-container deployment; limiter trips emit `event: "rate_limited"` logs for abuse forensics. Revisit with a SQLite-backed limiter when running more than one replica or on observed abuse.
+- **Fixed session tokens:** session tokens live 24h (30d when remembered) without rotation. Mitigations: hashed at rest, revocable per device and in bulk from the account page, cleaned up after expiry.
+
 ## Resolved decisions
 
-1. **Rate-limit store:** in-process sliding-window counters (`WindowLimiter` in `src/submissions.ts`): 60 requests/min per form+source key, 1000/min global. Counters reset on restart; acceptable for single replica.
+1. **Rate-limit store:** in-process sliding-window counters (`WindowLimiter` in `src/submissions.ts`): 60 requests/min per form+source key, plus a per-source pivot cap (20 distinct forms/min). Counters reset on restart; acceptable for single replica.
 2. **Privacy-safe fingerprint:** HMAC-SHA256 keyed by `SESSION_SECRET` over `formId:source:UTC-date`; source is forwarded client IP when trusted proxy is loopback, else peer address or user agent. Day component rotates keys daily; no raw IP is stored.
 3. **CSV header discovery:** two-pass prepared-statement iteration: first pass collects header union, second streams rows through `ReadableStream`. No full payload set in memory.
 

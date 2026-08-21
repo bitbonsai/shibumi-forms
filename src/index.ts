@@ -1,11 +1,18 @@
 import { createApp } from "./app";
 import { loadConfig } from "./config";
-import { migrate, openDatabase } from "./database";
+import { cleanupExpired, migrate, openDatabase } from "./database";
 
 process.umask(0o077);
 const config = loadConfig();
 const database = openDatabase(config.databasePath);
 migrate(database);
+
+function runCleanup() {
+  const removed = cleanupExpired(database);
+  console.log(JSON.stringify({ event: "cleanup", ...removed }));
+}
+runCleanup();
+setInterval(runCleanup, 6 * 3_600_000).unref?.();
 
 const app = createApp(config, database);
 const server = Bun.serve({

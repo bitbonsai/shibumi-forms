@@ -212,6 +212,41 @@ describe("magic-link authentication", () => {
     expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM sessions").get()!.count).toBe(1);
   });
 
+  test("account deletion requires the emailed confirmation link", async () => {
+    const { app, mailer, database } = setup();
+    const registerToken = await requestRegistration(app, mailer);
+    const cookie = cookieFrom(await app.request("/auth/confirm", form({ token: registerToken })));
+
+    const admin = await app.request("/admin", { headers: { cookie } });
+    const csrf = (await admin.text()).match(/name="csrf" value="([^"]+)"/)![1]!;
+    const requested = await app.request("/admin/account/delete", {
+      ...form({ csrf, confirmation: "Person@Example.com" }),
+      headers: { "content-type": "application/x-www-form-urlencoded", cookie, origin: config.publicUrl.origin },
+    });
+    expect(requested.status).toBe(200);
+    expect(await requested.text()).toContain("Check your email");
+    // typed email alone deletes nothing
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM users").get()!.count).toBe(1);
+    expect(mailer.messages).toHaveLength(2);
+    expect(mailer.messages[1]!.variant).toBe("delete-account");
+
+    const deleteToken = new URL(mailer.messages[1]!.confirmUrl).searchParams.get("token")!;
+    const page = await app.request(`/auth/confirm?token=${deleteToken}`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("Delete my account");
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM users").get()!.count).toBe(1);
+
+    const confirmed = await app.request("/auth/confirm", {
+      ...form({ token: deleteToken }),
+      headers: { ...form({}).headers, origin: config.publicUrl.origin },
+    });
+    expect(confirmed.status).toBe(303);
+    expect(confirmed.headers.get("location")).toBe("/");
+    for (const table of ["users", "forms", "submissions", "sessions"]) {
+      expect(database.query<{ count: number }, []>(`SELECT count(*) AS count FROM ${table}`).get()!.count).toBe(0);
+    }
+  });
+
   test("CSRF protects logout", async () => {
     const { app, mailer, database } = setup();
     const token = await requestRegistration(app, mailer);

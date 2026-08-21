@@ -139,6 +139,7 @@ export function registerSubmissionRoutes(app: Hono<AuthEnv>, config: AppConfig, 
     if (origin && origin !== form.allowed_origin) return context.json({ error: "Origin not allowed" }, 403);
     const keys = await requestKeys(context, config, form.id);
     if (!limiter.allows(keys.formKey, 60, 60_000) || !pivots.allows(keys.sourceKey, form.id, 20, 60_000)) {
+      console.log(JSON.stringify({ event: "rate_limited", route: "submission" }));
       return context.json({ error: "Too many requests" }, 429);
     }
 
