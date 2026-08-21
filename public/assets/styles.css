@@ -68,6 +68,7 @@ button, input { font: inherit; }
 nav { display: flex; align-items: center; gap: 1rem; color: var(--muted); font: var(--fs-md) var(--sans); }
 nav a { border-bottom: 1px solid transparent; text-decoration: none; }
 nav a:hover { border-bottom-color: var(--accent); color: var(--text); }
+.nav-dashboard { color: var(--text); font-weight: 600; }
 .theme-toggle { appearance: none; display: inline-grid; flex: none; place-items: center; width: 1.7rem; height: 1.7rem; margin: 0; padding: 0; border: 0; background: transparent; color: var(--muted); line-height: 0; cursor: pointer; }
 .theme-toggle:hover { border: 0; background: transparent; color: var(--text); }
 .theme-toggle svg { grid-area: 1 / 1; width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

@@ -116,7 +116,7 @@ describe("public submission endpoint", () => {
     expect(html).toContain("Copy agent prompt");
     expect(html).toContain("Set form action to http://localhost:3000/f/public-1");
     expect(html).toContain('name=&quot;website&quot;');
-    expect(html).toContain(">Account</a>");
+    expect(html).toContain(">Dashboard</a>");
     expect(html).not.toContain(">Sign in</a>");
     const csvResponse = await app.request("/admin/forms/form-1/submissions.csv", { headers: { cookie } });
     const csv = await csvResponse.text();
