@@ -5,7 +5,7 @@ import type { AppConfig } from "./config";
 import type { AppDatabase } from "./database";
 import type { Mailer } from "./email";
 import type { AppVariables } from "./security";
-import { accountView, checkEmailView, confirmView, invalidLinkView, loginView, registrationView } from "./views";
+import { aboutView, accountView, checkEmailView, confirmView, invalidLinkView, loginView, registrationView } from "./views";
 
 const MAGIC_LINK_MINUTES = 15;
 const SESSION_HOURS = 24;
@@ -151,6 +151,7 @@ export async function validCsrf(config: AppConfig, sessionToken: string, candida
 export function registerAuthRoutes(app: App, config: AppConfig, database: AppDatabase, mailer: Mailer, limiter = new RateLimiter()): void {
   app.get("/", (context) => context.html(registrationView(config)));
   app.get("/login", (context) => context.html(loginView(config)));
+  app.get("/about", (context) => context.html(aboutView(config)));
 
   app.post("/auth/magic-link", async (context) => {
     const body = await context.req.parseBody();

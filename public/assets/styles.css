@@ -133,6 +133,11 @@ button:hover, .button-link:hover { border-color: var(--accent-hover); background
 .result { position: relative; }
 .status-mark { float: right; display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
 .status-mark .icon { width: 1.25rem; height: 1.25rem; }
+.about { max-width: 40rem; padding: clamp(2rem, 5vw, 4rem) 0; }
+.about h1 { margin-bottom: 1.5rem; font-size: clamp(2.5rem, 5vw, 4rem); }
+.about p:not(.eyebrow, .alternate) { margin-bottom: 1.25rem; color: var(--muted); font-size: var(--fs-lg); line-height: 1.7; }
+.about a { color: var(--text); }
+.about .alternate { margin-top: 2rem; }
 .workspace { padding: clamp(1.5rem, 3vw, 2.5rem) 0 clamp(2rem, 6vw, 5rem); }
 .workspace-title { display: flex; align-items: end; justify-content: space-between; gap: 2rem; padding: 1rem 0 2.5rem; }
 .workspace-title h1 { overflow-wrap: anywhere; font-size: clamp(2rem, 4.5vw + .5rem, 4rem); }
