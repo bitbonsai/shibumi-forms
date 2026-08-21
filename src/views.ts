@@ -132,9 +132,9 @@ export function registrationView(config: AppConfig, input: { email?: string; pag
   const error = input.error ? `<p class="notice error" role="alert">${escapeHtml(input.error)}</p>` : "";
   return layout(config, "Connect your site", `<section class="auth-grid">
     <div class="intro">
-      <p class="eyebrow">Now your forms have a dashboard</p>
+      <p class="eyebrow">Easy, free, no strings attached</p>
       <h1>Forms for<br>static sites.</h1>
-      <p class="lede">Easy, free, no strings attached.</p>
+      <p class="lede">One URL for your form. One dashboard for everything it collects.</p>
       <div class="signal" aria-hidden="true"><span>your form</span><i></i><span>one endpoint</span></div>
     </div>
     <div class="panel">
