@@ -149,9 +149,18 @@ export async function validCsrf(config: AppConfig, sessionToken: string, candida
 }
 
 export function registerAuthRoutes(app: App, config: AppConfig, database: AppDatabase, mailer: Mailer, limiter = new RateLimiter()): void {
-  app.get("/", (context) => context.html(registrationView(config)));
-  app.get("/login", (context) => context.html(loginView(config)));
-  app.get("/about", (context) => context.html(aboutView(config)));
+  // Read-only session check for public pages: no redirect, no last-seen update.
+  async function hasSession(context: Context<AuthEnv>): Promise<boolean> {
+    const token = getCookie(context, sessionCookieName(config));
+    if (!token || !TOKEN_PATTERN.test(token)) return false;
+    const tokenHash = await sha256(token);
+    return database.query("SELECT 1 FROM sessions WHERE token_hash = ? AND expires_at > ?")
+      .get(tokenHash, new Date().toISOString()) !== null;
+  }
+
+  app.get("/", async (context) => context.html(registrationView(config, { signedIn: await hasSession(context) })));
+  app.get("/login", async (context) => context.html(loginView(config, { signedIn: await hasSession(context) })));
+  app.get("/about", async (context) => context.html(aboutView(config, await hasSession(context))));
 
   app.post("/auth/magic-link", async (context) => {
     const body = await context.req.parseBody();

@@ -51,16 +51,18 @@ Application listens on `0.0.0.0:${PORT}`. Production TLS terminates at reverse p
 ## Runtime modules
 
 ```text
+src/index.ts        startup: config, migrate, serve
 src/config.ts       environment parsing and startup validation
-src/database.ts     connection, pragmas, prepared statements, transactions
-src/security.ts     headers, CSRF, origin checks, request limits, safe logging
-src/auth.ts         magic links, sessions, ownership identity
-src/forms.ts        form registration, settings, activation, deletion
-src/submissions.ts  public ingestion, listing, details, deletion, CSV
-src/email.ts        Mailer interface and provider/test transports
+src/database.ts     connection, pragmas, migrations, transactions
+src/security.ts     headers, route-class logging, request IDs
+src/auth.ts         magic links, sessions, account routes, form creation
+src/submissions.ts  public ingestion, rate limiting, listing, notes, CSV, form toggle/delete
+src/email.ts        Mailer interface, magic-link email rendering, Resend/Discard transports
 src/views.ts        escaped server-rendered HTML
-src/app.ts          route composition, request IDs, error boundary, health
+src/app.ts          route composition, body limit, error boundary, health
 ```
+
+There is no separate forms module: form creation lives in `auth.ts`, form settings and deletion in `submissions.ts`.
 
 Scripts own migrations, backup, restore, and operational stats. Browser JavaScript only enhances copy, dialogs, and pending states.
 
@@ -75,7 +77,7 @@ Scripts own migrations, backup, restore, and operational stats. Browser JavaScri
 5. `POST /auth/confirm` consumes token and creates session in one transaction.
 6. Session cookie contains opaque token. Database stores token hash only.
 
-Session cookie:
+Session cookie (production; development drops the `__Host-` prefix):
 
 ```text
 __Host-shibumi_forms_session
@@ -100,9 +102,9 @@ Public ID reduces accidental discovery but is not treated as secret.
 ### Accept submission
 
 1. Resolve active form by public ID or return generic `404`.
-2. Enforce 64 KiB body limit before unbounded parsing.
+2. Enforce 64 KiB body limit (Hono `bodyLimit`) before parsing.
 3. Accept URL-encoded, multipart without files, or JSON from approved CORS origin.
-4. Parse at most 64 named fields, bounded names, values, and repetitions.
+4. Parse at most 64 named fields, names ≤ 100 chars, values ≤ 10 KiB, ≤ 20 repetitions per name.
 5. Reject files, nested objects, invalid field names, and unsupported content types.
 6. Strip reserved fields. Return normal success without storing when honeypot is populated.
 7. Apply per-form and privacy-safe request limits.
@@ -117,7 +119,7 @@ Origin is abuse signal, not authentication. Request cannot choose redirect targe
 2. Require CSRF token and same-origin validation for mutations.
 3. Include authenticated `user_id` in every form, submission, export, and deletion query.
 4. Escape values on server and render as text in browser.
-5. Use `(created_at, id)` cursor for pages of 50 submissions.
+5. Page submissions 12 at a time with `LIMIT/OFFSET` ordered by `(created_at, id) DESC` and a numbered pager.
 6. Stream CSV with stable header union, correct escaping, and formula-injection defense.
 7. Perform form and account cascades in explicit transactions.
 
@@ -126,10 +128,12 @@ Origin is abuse signal, not authentication. Request cannot choose redirect targe
 Tracked migrations create:
 
 - `users`: normalized unique email, Terms version and acceptance time
-- `magic_links`: hashed one-time token, purpose, pending page URL, expiry, consumption
-- `sessions`: user, hashed token, fixed expiry, created and last-seen times
+- `magic_links`: hashed one-time token, purpose (`register`/`login`), original email, pending page URL, expiry, consumption
+- `sessions`: user, hashed token, device label, fixed expiry, created and last-seen times
 - `forms`: owner, public ID, page URL, exact origin, success URL, active state
-- `submissions`: form, JSON payload, creation time
+- `submissions`: form, JSON payload, optional owner note, creation time
+
+Applied migrations: `001_initial`, `002_auth_metadata` (magic-link email, session device label), `003_submission_notes`.
 
 Key index:
 
@@ -198,6 +202,7 @@ bun run migrate
 bun run backup
 bun run restore -- <backup>
 bun run admin:stats
+bun ship          # vendored self-updating deploy script (excluded from tsconfig)
 ```
 
 Backups use SQLite online backup API or safe checkpoint/copy flow, leave host encrypted, follow configured retention, and receive quarterly restore tests. Restore into blank volume is release requirement.
@@ -223,15 +228,18 @@ Automated tests cover:
 
 Deployment proof covers empty-volume startup, repeat migration, restart persistence, image rollback compatibility, backup, and restore.
 
+## Resolved decisions
+
+1. **Rate-limit store:** in-process sliding-window counters (`WindowLimiter` in `src/submissions.ts`): 60 requests/min per form+source key, 1000/min global. Counters reset on restart; acceptable for single replica.
+2. **Privacy-safe fingerprint:** HMAC-SHA256 keyed by `SESSION_SECRET` over `formId:source:UTC-date`; source is forwarded client IP when trusted proxy is loopback, else peer address or user agent. Day component rotates keys daily; no raw IP is stored.
+3. **CSV header discovery:** two-pass prepared-statement iteration: first pass collects header union, second streams rows through `ReadableStream`. No full payload set in memory.
+
 ## Unknowns
 
 Resolve before affected phase starts:
 
-1. **Rate-limit store:** SQLite-backed counters or bounded in-process counters for single replica; define behavior across restart and future replicas.
-2. **Privacy-safe fingerprint:** exact HMAC inputs, rotation period, secret handling, and counter retention.
-3. **Hosted topology:** persistent-volume path, proxy trust configuration, deployment health gate, rollback rules, and backup destination.
-4. **Backup mechanism:** Bun SQLite online backup support versus explicit WAL checkpoint and copy procedure.
-5. **Policy configuration:** Terms version, policy URLs, hosting location, backup retention, subprocessors, and abuse contact.
-6. **Turnstile scope:** account-entry only for MVP; per-form challenge remains deferred until host-management design is proven.
-7. **CSV header discovery:** bounded strategy for stable union across large exports without loading all payloads into browser or unbounded memory.
-8. **Migration compatibility:** rollback policy once schema changes stop being backward compatible.
+1. **Hosted topology:** persistent-volume path, proxy trust configuration, deployment health gate, rollback rules, and backup destination.
+2. **Backup mechanism:** Bun SQLite online backup support versus explicit WAL checkpoint and copy procedure.
+3. **Policy configuration:** Terms version, policy URLs, hosting location, backup retention, subprocessors, and abuse contact.
+4. **Turnstile scope:** account-entry only for MVP (configured via `TURNSTILE_SITE_KEY`; unset in production today); per-form challenge deferred.
+5. **Migration compatibility:** rollback policy once schema changes stop being backward compatible.

@@ -32,10 +32,11 @@ Core promise:
 MVP includes:
 
 - multiple forms and domains per account
-- email magic-link authentication
+- email magic-link authentication, including account creation from a sign-in attempt with an unknown email
 - arbitrary text fields and repeated values
 - standard HTML posts plus approved-origin `fetch` requests
 - paginated submission table and detail dialog
+- per-submission owner notes
 - CSV export
 - submission, form, session, and account deletion
 - documented backup and restore

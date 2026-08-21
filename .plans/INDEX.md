@@ -2,7 +2,7 @@
 
 ## Active
 
-(none)
+- [Hardening for free public launch](hardening.md): login CSRF fix, per-account quotas, Turnstile + email budget, rate-limiter rework, ops checks. Items 1–4 block public announcement.
 
 ## Planned
 

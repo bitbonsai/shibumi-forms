@@ -47,17 +47,19 @@ Entry screen asks for:
 
 - page URL
 - account email
-- Terms acknowledgement
+- Terms acknowledgement (short form: "I agree to the Terms.")
 
-Supporting copy:
+The sensitive-data warning and full responsibility clause appear on the create-account confirmation screen, before the commit button:
 
-> You must provide required privacy notices and obtain any necessary consent from visitors. Do not collect passwords, payment card details, health information, government identifiers, or other highly sensitive data. You are responsible for data you export, share, retain, or use.
+> Do not collect passwords, card details, health information, government identifiers, or other highly sensitive data.
 
 Submission always returns neutral response:
 
 > Check your email. If the address can receive a sign-in link, it should arrive shortly.
 
 Email link opens confirmation screen but does not consume token. User explicitly confirms with optional `Keep me signed in for 30 days on this device`. Successful POST signs user in, creates first form when needed, then opens setup screen.
+
+Signing in with an unknown email sends a create-account link instead of failing; the confirmation screen then collects Terms acceptance. The response stays neutral either way.
 
 ### 2. Connect static page
 
@@ -98,13 +100,14 @@ Table behavior:
 
 - timestamp is first column
 - dynamic columns come from union of current page fields
-- columns retain first-seen order
-- visible dynamic columns are capped, with overflow represented by `More`
+- columns retain first-seen order, capped at 6 visible
 - long values truncate visually only
+- rows with a saved note carry a note marker
 - row opens complete detail dialog
+- pages hold 12 submissions with a numbered `‹ N of M ›` pager; page swaps happen in place
 - narrow screens use card representation instead of squeezed table
 
-Detail dialog includes timestamp, submission ID, every key/value, arrays, preserved newlines, copy action per value, and delete action. Escape closes dialog and focus returns to originating row.
+Detail dialog includes timestamp, submission ID, every key/value, arrays, preserved newlines, copy action per value, an editable owner note, and delete action. Escape closes dialog and focus returns to originating row.
 
 ### 4. Manage forms and account
 

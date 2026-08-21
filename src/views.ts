@@ -38,7 +38,7 @@ export function formatRelative(iso: string, now = Date.now()): string {
   return formatDate(iso);
 }
 
-function layout(config: AppConfig, title: string, content: string, admin = false): string {
+function layout(config: AppConfig, title: string, content: string, admin = false, signedIn = admin): string {
   const turnstileScript = config.turnstileSiteKey
     ? '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>'
     : "";
@@ -51,7 +51,13 @@ function layout(config: AppConfig, title: string, content: string, admin = false
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1e1510">
   <meta name="color-scheme" content="light dark">
   <title>${escapeHtml(title)} · Shibumi Forms</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <meta property="og:title" content="${escapeHtml(title)} · Shibumi Forms">
+  <meta property="og:description" content="Forms for static sites. Point a plain HTML form at one URL and every submission lands in a private dashboard.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="${escapeHtml(new URL("/assets/og.png", config.publicUrl).href)}">
+  <meta name="twitter:card" content="summary_large_image">
   <script src="/assets/theme.js"></script>
   <link rel="stylesheet" href="/assets/styles.css">
   ${turnstileScript}
@@ -59,8 +65,8 @@ function layout(config: AppConfig, title: string, content: string, admin = false
 <body>
   <div class="shell">
     <header class="site-header">
-      <a class="mark" href="/" aria-label="Shibumi Forms home"><img src="/assets/favicon.png" alt=""><span>shibumi<span class="mark-tld"> forms</span></span></a>
-      <nav aria-label="Primary"><a href="/about">About</a><a href="https://shibumistack.dev">Shibumi Stack</a><a href="${admin ? "/admin" : "/login"}">${admin ? "Account" : "Sign in"}</a><a class="nav-icon" href="https://github.com/bitbonsai/shibumi-forms" aria-label="Source on GitHub"><i class="icon icon-github"></i></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></nav>
+      <a class="mark" href="/" aria-label="Shibumi Forms home"><svg class="mark-logo" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.75 10.375C1.75 10.4911 1.75 10.5491 1.75482 10.598C1.80158 11.0728 2.17721 11.4484 2.65198 11.4952C2.70087 11.5 2.75892 11.5 2.875 11.5H12.125C13.0678 11.5 13.5392 11.5 13.8321 11.2071C14.125 10.9142 14.125 10.4428 14.125 9.5V6.75C14.125 5.80719 14.125 5.33579 13.8321 5.04289C13.5392 4.75 13.0678 4.75 12.125 4.75H3.5C2.79777 4.75 2.44665 4.75 2.19443 4.91853C2.08524 4.99149 1.99149 5.08524 1.91853 5.19443C1.75 5.44665 1.75 5.79777 1.75 6.5C1.75 7.20223 1.75 7.55335 1.91853 7.80557C1.99149 7.91476 2.08524 8.00851 2.19443 8.08147C2.44665 8.25 2.79777 8.25 3.5 8.25H6.625M5.5 9.375L6.625 8.25L5.5 7.125" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>shibumi<span class="mark-tld"> forms</span></span></a>
+      <nav aria-label="Primary"><a href="/about">About</a><a href="https://shibumistack.dev">Shibumi Stack</a><a href="${signedIn ? "/admin" : "/login"}">${signedIn ? "Account" : "Sign in"}</a><a class="nav-icon" href="https://github.com/bitbonsai/shibumi-forms" aria-label="Source on GitHub"><i class="icon icon-github"></i></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></nav>
     </header>
     <main>${content}${admin ? '<script src="/assets/admin.js" defer></script>' : ""}</main>
     <footer class="site-footer">
@@ -131,17 +137,19 @@ function turnstile(config: AppConfig): string {
     : "";
 }
 
-export function registrationView(config: AppConfig, input: { email?: string; pageUrl?: string; error?: string } = {}): string {
+export function registrationView(config: AppConfig, input: { email?: string; pageUrl?: string; error?: string; signedIn?: boolean } = {}): string {
   const error = input.error ? `<p class="notice error" role="alert">${escapeHtml(input.error)}</p>` : "";
+  const alternate = input.signedIn
+    ? `<p class="alternate">You're signed in. <a href="/admin">Open your dashboard</a></p>`
+    : `<p class="alternate">Already have forms? <a href="/login">Sign in</a></p>`;
   return layout(config, "Connect your site", `<section class="auth-grid">
     <div class="intro">
+      <svg class="intro-logo" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.75 10.375C1.75 10.4911 1.75 10.5491 1.75482 10.598C1.80158 11.0728 2.17721 11.4484 2.65198 11.4952C2.70087 11.5 2.75892 11.5 2.875 11.5H12.125C13.0678 11.5 13.5392 11.5 13.8321 11.2071C14.125 10.9142 14.125 10.4428 14.125 9.5V6.75C14.125 5.80719 14.125 5.33579 13.8321 5.04289C13.5392 4.75 13.0678 4.75 12.125 4.75H3.5C2.79777 4.75 2.44665 4.75 2.19443 4.91853C2.08524 4.99149 1.99149 5.08524 1.91853 5.19443C1.75 5.44665 1.75 5.79777 1.75 6.5C1.75 7.20223 1.75 7.55335 1.91853 7.80557C1.99149 7.91476 2.08524 8.00851 2.19443 8.08147C2.44665 8.25 2.79777 8.25 3.5 8.25H6.625M5.5 9.375L6.625 8.25L5.5 7.125" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <p class="eyebrow">Easy, free, no strings attached</p>
       <h1>Forms for<br>static sites.</h1>
-      <p class="lede">Point your HTML form at one URL and every submission lands in a private dashboard, ready to read, export, or delete.</p>
-      <div class="signal" aria-hidden="true"><span>your form</span><i></i><span>one endpoint</span></div>
+      <p class="lede">Point your HTML form at one URL and every submission lands in a private dashboard, ready to read, add notes, export, or delete.</p>
     </div>
     <div class="panel">
-      <p class="step">01 / Connect</p>
       <h2>Create your first form</h2>
       ${error}
       <form action="/auth/magic-link" method="post">
@@ -150,29 +158,51 @@ export function registrationView(config: AppConfig, input: { email?: string; pag
         <input id="page_url" name="page_url" type="url" inputmode="url" required autocomplete="url" placeholder="https://your-site.com/contact" value="${escapeHtml(input.pageUrl || "")}">
         <label for="email">Account email</label>
         <input id="email" name="email" type="email" inputmode="email" required autocomplete="email" placeholder="you@example.com" value="${escapeHtml(input.email || "")}">
-        <label class="check"><input name="accepted_terms" type="checkbox" value="yes" required><span>I agree to the <a href="${escapeHtml(config.termsUrl.href)}">Terms</a> and accept responsibility for submission data.</span></label>
-        <p class="fine-print">Do not collect passwords, card details, health information, government identifiers, or other highly sensitive data.</p>
+        <label class="check"><input name="accepted_terms" type="checkbox" value="yes" required><span>I agree to the <a href="${escapeHtml(config.termsUrl.href)}">Terms</a>.</span></label>
         ${turnstile(config)}
-        <button type="submit">Email my sign-in link <span aria-hidden="true">→</span></button>
+        <button type="submit">Email my sign-in link <i class="icon icon-logo" aria-hidden="true"></i></button>
       </form>
-      <p class="alternate">Already have forms? <a href="/login">Sign in</a></p>
+      ${alternate}
     </div>
-  </section>`);
+  </section>`, false, input.signedIn === true);
 }
 
-export function aboutView(config: AppConfig): string {
+export function aboutView(config: AppConfig, signedIn = false): string {
+  const cta = signedIn
+    ? `<a class="button-link" href="/admin">Open your dashboard <i class="icon icon-logo" aria-hidden="true"></i></a>`
+    : `<a class="button-link" href="/">Create your first form <i class="icon icon-logo" aria-hidden="true"></i></a>`;
   return layout(config, "About", `<section class="about">
     <p class="eyebrow">About</p>
     <h1>Why this exists</h1>
-    <p>Static sites are easy to publish and awkward to make interactive. The moment you want a contact form, a waitlist, or an RSVP, you are pushed toward a hosted form builder, a heavier stack, or a service that keeps your visitors' data somewhere you cannot see.</p>
-    <p>Shibumi Forms is the small alternative. Point a plain HTML form at one URL and every submission lands in a private dashboard where you can read, export, and delete it. Plain HTML posts work without any client JavaScript, so your page stays exactly as fast and simple as it was.</p>
-    <p>The whole service is one container writing to one SQLite file, open source under the MIT license. Use it hosted here, or run your own copy with the same core: <a href="https://github.com/bitbonsai/shibumi-forms">github.com/bitbonsai/shibumi-forms</a>.</p>
-    <p>It is part of <a href="https://shibumistack.dev">Shibumi Stack</a>, tools built on the idea that most software gets better by getting smaller.</p>
-    <p class="alternate"><a class="ghost-link" href="/">Create your first form</a></p>
-  </section>`);
+    <p class="about-lede">Static sites are easy to publish but hard to make interactive.</p>
+    <p>The moment you want a contact form, a waitlist, or an RSVP, you're pushed toward a hosted form builder, a heavier stack, paid tiers with artificial limits, or handing your visitors' data to who knows where.</p>
+    <p><span class="accent-text">Shibumi Forms is the small alternative.</span> Point a plain HTML form at one URL and every submission lands in a private dashboard where you can read, export, add notes to, and delete it.</p>
+    <p>Plain HTML posts work without any client JavaScript, so your page stays exactly as fast and simple as it was.</p>
+    <ul class="about-facts">
+      <li><strong>One container</strong><span>Self-host it, or use the hosted version, <b>forever free</b>*.</span></li>
+      <li><strong>One database</strong><span>A single SQLite database you can back up, move, or delete.**</span></li>
+      <li><strong>Plain HTML</strong><span>A form tag and an action URL. JavaScript optional.</span></li>
+    </ul>
+    <p>The core is open source under the MIT license. Use it hosted here <span class="accent-text">for free</span>, or run your own copy: <a href="https://github.com/bitbonsai/shibumi-forms">github.com/bitbonsai/shibumi-forms</a>.</p>
+    <aside class="about-note">
+      <p class="about-term">shibumi <span lang="ja">渋み</span></p>
+      <p>Understated beauty through restraint. Shibumi Forms is part of <a href="https://shibumistack.dev">Shibumi Stack</a>, tools built on the idea that most software gets better by getting smaller.</p>
+    </aside>
+    <p class="about-cta">${cta}</p>
+    <p class="fine-print about-footnote">* The hosted service is free to use and runs on donations. If an endpoint attracts abuse or unusual load, we may pause it while we work out a fix.</p>
+    <details class="donate">
+      <summary><span>Donations to keep the service free are always welcome</span><i class="icon icon-hand-heart" aria-hidden="true"></i></summary>
+      <div class="donate-links">
+        <a class="ghost-link" href="https://ko-fi.com/bitbonsai">Ko-fi</a>
+        <a class="ghost-link" href="https://github.com/sponsors/bitbonsai">GitHub Sponsors</a>
+        <a class="ghost-link" href="https://liberapay.com/bitbonsai/">Liberapay</a>
+      </div>
+    </details>
+    <p class="fine-print about-footnote">** When self-hosting. On the hosted service your data stays exportable as CSV and deletable at any time.</p>
+  </section>`, false, signedIn);
 }
 
-export function loginView(config: AppConfig, input: { email?: string; error?: string } = {}): string {
+export function loginView(config: AppConfig, input: { email?: string; error?: string; signedIn?: boolean } = {}): string {
   const error = input.error ? `<p class="notice error" role="alert">${escapeHtml(input.error)}</p>` : "";
   return layout(config, "Sign in", `<section class="single-panel">
     <div class="panel">
@@ -185,17 +215,16 @@ export function loginView(config: AppConfig, input: { email?: string; error?: st
         <label for="email">Account email</label>
         <input id="email" name="email" type="email" inputmode="email" required autocomplete="email" value="${escapeHtml(input.email || "")}">
         ${turnstile(config)}
-        <button type="submit">Email sign-in link <span aria-hidden="true">→</span></button>
+        <button type="submit">Email sign-in link <i class="icon icon-logo" aria-hidden="true"></i></button>
       </form>
       <p class="alternate"><a href="/">Create your first form</a></p>
     </div>
-  </section>`);
+  </section>`, false, input.signedIn === true);
 }
 
 export function checkEmailView(config: AppConfig, email?: string): string {
   const destination = email ? `We sent a link to <strong class="sent-to">${escapeHtml(email)}</strong>.` : "We sent you a link.";
   return layout(config, "Check your email", `<section class="single-panel"><div class="panel result">
-    <p class="step">02 / Verify</p>
     <div class="status-mark" aria-hidden="true"><i class="icon icon-send"></i></div>
     <h1>Check your email</h1>
     <p>${destination} Open it within 15 minutes.</p>
@@ -210,8 +239,10 @@ export function confirmView(config: AppConfig, token: string, hostname?: string,
   const terms = creating
     ? `<label class="check"><input name="accepted_terms" type="checkbox" value="yes" required><span>I agree to the <a href="${escapeHtml(config.termsUrl.href)}">Terms</a> and accept responsibility for submission data.</span></label>`
     : "";
+  const finePrint = creating
+    ? `<p class="fine-print">Do not collect passwords, card details, health information, government identifiers, or other highly sensitive data.</p>`
+    : "";
   return layout(config, creating ? "Create your account" : "Confirm sign-in", `<section class="single-panel"><div class="panel result">
-    <p class="step">02 / Verify</p>
     <h1>${creating ? "Create your account" : `Confirm sign-in${escapeHtml(context)}`}</h1>
     <p>${creating ? "This address has no account yet. This button creates one and signs you in." : "This button signs you in."} Link works once and expires after 15 minutes.</p>
     ${error}
@@ -219,7 +250,8 @@ export function confirmView(config: AppConfig, token: string, hostname?: string,
       <input type="hidden" name="token" value="${escapeHtml(token)}">
       ${terms}
       <label class="check"><input name="remember" type="checkbox" value="yes"><span>Keep me signed in for 30 days on this device</span></label>
-      <button type="submit">${creating ? "Create account and continue" : "Confirm and continue"} <span aria-hidden="true">→</span></button>
+      ${finePrint}
+      <button type="submit">${creating ? "Create account and continue" : "Confirm and continue"} <i class="icon icon-logo" aria-hidden="true"></i></button>
     </form>
   </div></section>`);
 }
@@ -229,7 +261,7 @@ export function invalidLinkView(config: AppConfig): string {
     <p class="step">Link unavailable</p>
     <h1>Request a fresh link</h1>
     <p>This sign-in link expired or has already been used.</p>
-    <p><a class="button-link" href="/login">Request another link <span aria-hidden="true">→</span></a></p>
+    <p><a class="button-link" href="/login">Request another link <i class="icon icon-logo" aria-hidden="true"></i></a></p>
   </div></section>`);
 }
 
@@ -259,7 +291,7 @@ export function accountView(config: AppConfig, email: string, csrf: string, sess
         <aside class="create-card" aria-labelledby="create-heading">
           <div class="create-copy"><span class="create-mark" aria-hidden="true"><i class="icon icon-plus"></i></span><div><p class="step">New endpoint</p><h2 id="create-heading">Connect another page</h2></div></div>
           <p class="create-guidance"><strong>What happens next</strong><span>We generate endpoint, paste-ready HTML, and coding-agent prompt.</span></p>
-          <form action="/admin/forms/create" method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label for="new-page-url">Public page URL</label><div class="create-input-row"><input id="new-page-url" name="page_url" type="url" required placeholder="https://your-site.com/contact"><button type="submit">Continue <span aria-hidden="true">→</span></button></div></form>
+          <form action="/admin/forms/create" method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label for="new-page-url">Public page URL</label><div class="create-input-row"><input id="new-page-url" name="page_url" type="url" required placeholder="https://your-site.com/contact"><button type="submit">Continue <i class="icon icon-logo" aria-hidden="true"></i></button></div></form>
         </aside>
       </section>
     </div>
@@ -294,7 +326,7 @@ export function formView(config: AppConfig, form: { id: string; name: string; pa
         <summary><span>Integration guides</span><small>Paste-ready HTML and a coding-agent prompt</small></summary>
         <div class="integration-grid">
           <article class="integration-card"><header><span>01</span><div><h3>Paste into your page</h3><p>Use this as a new form or copy action, method, and honeypot into existing markup.</p></div></header><pre id="html-snippet"><code>${escapeHtml(snippet)}</code></pre><button class="secondary copy-button" type="button" data-copy-target="html-snippet">Copy HTML</button><p class="fine-print">Every submitted field needs a <code>name</code>. Visitors return to <a href="${escapeHtml(form.page_url)}">${escapeHtml(form.page_url)}</a>.</p></article>
-          <article class="integration-card agent-card"><header><span>02</span><div><h3>Hand it to a coding agent</h3><p>Copy prompt into your agent from project containing form page.</p></div></header><pre id="agent-prompt"><code>${escapeHtml(agentPrompt)}</code></pre><button class="copy-button" type="button" data-copy-target="agent-prompt">Copy agent prompt <span aria-hidden="true">→</span></button><p class="fine-print">Prompt preserves existing design and keeps form working without JavaScript.</p></article>
+          <article class="integration-card agent-card"><header><span>02</span><div><h3>Hand it to a coding agent</h3><p>Copy prompt into your agent from project containing form page.</p></div></header><pre id="agent-prompt"><code>${escapeHtml(agentPrompt)}</code></pre><button class="copy-button" type="button" data-copy-target="agent-prompt">Copy agent prompt <i class="icon icon-logo" aria-hidden="true"></i></button><p class="fine-print">Prompt preserves existing design and keeps form working without JavaScript.</p></article>
         </div>
       </details>
     </section>`;
