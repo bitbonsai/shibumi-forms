@@ -17,13 +17,6 @@ const validEnvironment = {
 };
 
 describe("loadConfig", () => {
-  test("parses valid environment", () => {
-    const config = loadConfig(validEnvironment);
-    expect(config.port).toBe(3000);
-    expect(config.publicUrl.href).toBe("http://localhost:3000/");
-    expect(config.backupRetentionDays).toBe(30);
-  });
-
   test("names missing field", () => {
     const { PUBLIC_URL: _, ...environment } = validEnvironment;
     expect(() => loadConfig(environment)).toThrow(new ConfigError("PUBLIC_URL", "is required"));

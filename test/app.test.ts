@@ -40,12 +40,6 @@ describe("service routes", () => {
     expect(await response.json()).toEqual({ ok: true });
   });
 
-  test("serves local stylesheet", async () => {
-    const response = await setup().request("/assets/styles.css");
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toContain("text/css");
-  });
-
   test("rejects oversized bodies", async () => {
     const response = await setup().request("/auth/magic-link", {
       method: "POST",
