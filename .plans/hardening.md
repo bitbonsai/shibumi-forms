@@ -96,5 +96,7 @@ After each item: `bun run typecheck && bun test && bun audit`. Suite currently 2
 - [x] Turnstile live on alpha (verified: widget renders, tokenless POST 400s), email budget enforced
 - [x] Alpha port probe from outside fails (91.99.125.239:9105 unreachable)
 - [x] Global bucket replaced with per-source pivot cap
-- [ ] Cleanup job running (log line on boot)
-- [ ] security.txt + abuse contact live
+- [x] Cleanup job running (boot log: {"event":"cleanup",...} verified on alpha)
+- [x] security.txt + abuse contact live (200 at /.well-known/security.txt, links on about + footer)
+- [x] Account deletion requires emailed confirmation link (migration 004)
+- [x] rate_limited logging + accepted-risk notes in ARCHITECTURE.md
