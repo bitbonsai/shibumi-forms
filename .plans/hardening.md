@@ -93,7 +93,8 @@ After each item: `bun run typecheck && bun test && bun audit`. Suite currently 2
 
 - [x] Login CSRF closed (test proves cross-origin confirm POST 403s)
 - [x] Quotas enforced + dashboard full-state copy
-- [ ] Turnstile live on alpha (deploy step; email budget enforced in code)
+- [x] Turnstile live on alpha (verified: widget renders, tokenless POST 400s), email budget enforced
+- [x] Alpha port probe from outside fails (91.99.125.239:9105 unreachable)
 - [x] Global bucket replaced with per-source pivot cap
 - [ ] Alpha port probe from outside fails
 - [ ] Cleanup job running (log line on boot)
