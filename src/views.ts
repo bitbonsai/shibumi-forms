@@ -135,7 +135,7 @@ export function registrationView(config: AppConfig, input: { email?: string; pag
       <p class="eyebrow">Static page, working form</p>
       <h1>Collect replies.<br>Keep things simple.</h1>
       <p class="lede">Add one endpoint to any HTML form. Review submissions in one calm, private place.</p>
-      <div class="signal" aria-hidden="true"><span>your site</span><i></i><span>one database</span></div>
+      <div class="signal" aria-hidden="true"><span>your form</span><i></i><span>one endpoint</span></div>
     </div>
     <div class="panel">
       <p class="step">01 / Connect</p>
