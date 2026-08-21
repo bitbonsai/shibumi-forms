@@ -14,6 +14,9 @@ export type AppConfig = {
   termsVersion: string;
   privacyUrl: URL;
   backupRetentionDays: number;
+  maxFormsPerAccount: number;
+  maxSubmissionsPerForm: number;
+  maxEmailsPerDay: number;
 };
 
 type Environment = Record<string, string | undefined>;
@@ -126,5 +129,8 @@ export function loadConfig(env: Environment = Bun.env): AppConfig {
     termsVersion: required(env, "TERMS_VERSION"),
     privacyUrl,
     backupRetentionDays: integer(env, "BACKUP_RETENTION_DAYS", 30, 1, 3650),
+    maxFormsPerAccount: integer(env, "MAX_FORMS_PER_ACCOUNT", 10, 1, 1000),
+    maxSubmissionsPerForm: integer(env, "MAX_SUBMISSIONS_PER_FORM", 10_000, 1, 1_000_000),
+    maxEmailsPerDay: integer(env, "MAX_EMAILS_PER_DAY", 80, 0, 100_000),
   };
 }

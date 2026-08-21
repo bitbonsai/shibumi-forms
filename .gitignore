@@ -9,3 +9,4 @@ backups/
 coverage/
 .plans/next.md
 .plans/next.prev.md
+.plans/*.local.md

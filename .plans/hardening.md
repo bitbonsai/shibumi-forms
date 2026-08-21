@@ -91,10 +91,10 @@ After each item: `bun run typecheck && bun test && bun audit`. Suite currently 2
 
 ## Done when
 
-- [ ] Login CSRF closed (test proves cross-origin confirm POST 403s)
-- [ ] Quotas enforced + dashboard full-state copy
-- [ ] Turnstile live on alpha, email budget enforced
-- [ ] Global bucket replaced with per-source pivot cap
+- [x] Login CSRF closed (test proves cross-origin confirm POST 403s)
+- [x] Quotas enforced + dashboard full-state copy
+- [ ] Turnstile live on alpha (deploy step; email budget enforced in code)
+- [x] Global bucket replaced with per-source pivot cap
 - [ ] Alpha port probe from outside fails
 - [ ] Cleanup job running (log line on boot)
 - [ ] security.txt + abuse contact live

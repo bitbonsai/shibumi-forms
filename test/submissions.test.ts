@@ -139,6 +139,77 @@ describe("public submission endpoint", () => {
     expect(response.status).toBe(404);
   });
 
+  test("submission quota returns 429 and stores nothing over cap", async () => {
+    const capped = loadConfig({
+      NODE_ENV: "test", PUBLIC_URL: "http://localhost:3000", DATABASE_PATH: ":memory:",
+      SESSION_SECRET: "0123456789abcdef0123456789abcdef", EMAIL_FROM: "forms@example.com",
+      EMAIL_PROVIDER: "discard", TERMS_URL: "https://example.com/terms", TERMS_VERSION: "1",
+      PRIVACY_URL: "https://example.com/privacy", MAX_SUBMISSIONS_PER_FORM: "2",
+    });
+    const { database } = setup();
+    const app = createApp(capped, database, mailer);
+    const post = () => app.request("/f/public-1", {
+      method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", origin: "https://site.example" },
+      body: new URLSearchParams({ email: "a@example.com" }),
+    });
+    expect((await post()).status).toBe(303);
+    expect((await post()).status).toBe(303);
+    const rejected = await post();
+    expect(rejected.status).toBe(429);
+    expect(count(database)).toBe(2);
+  });
+
+  test("form quota rejects creation over per-account cap", async () => {
+    const capped = loadConfig({
+      NODE_ENV: "test", PUBLIC_URL: "http://localhost:3000", DATABASE_PATH: ":memory:",
+      SESSION_SECRET: "0123456789abcdef0123456789abcdef", EMAIL_FROM: "forms@example.com",
+      EMAIL_PROVIDER: "discard", TERMS_URL: "https://example.com/terms", TERMS_VERSION: "1",
+      PRIVACY_URL: "https://example.com/privacy", MAX_FORMS_PER_ACCOUNT: "1",
+    });
+    const { database } = setup();
+    const app = createApp(capped, database, mailer);
+    const token = await addSession(database, "user-1", 9);
+    const cookie = `shibumi_forms_session=${token}`;
+    const admin = await app.request("/admin", { headers: { cookie } });
+    const csrf = (await admin.text()).match(/name="csrf" value="([^"]+)"/)![1]!;
+    const response = await app.request("/admin/forms/create", {
+      method: "POST",
+      headers: { cookie, origin: capped.publicUrl.origin, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ csrf, page_url: "https://site.example/second" }),
+    });
+    expect(response.status).toBe(429);
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM forms").get()!.count).toBe(1);
+  });
+
+  test("per-form rate limit trips on the 61st request in a minute", async () => {
+    const { app } = setup();
+    const post = () => app.request("/f/public-1", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", origin: "https://site.example", "user-agent": "burst-source" },
+      body: new URLSearchParams({ email: "a@example.com" }),
+    });
+    for (let i = 0; i < 60; i++) expect((await post()).status).toBe(303);
+    expect((await post()).status).toBe(429);
+  });
+
+  test("one source spraying many forms trips pivot cap without hurting others", async () => {
+    const { app, database } = setup();
+    const now = new Date().toISOString();
+    for (let i = 0; i < 21; i++) {
+      database.query(`INSERT INTO forms (id, public_id, user_id, name, page_url, allowed_origin, success_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(`pivot-form-${i}`, `pivot-${i}`, "user-1", `Pivot ${i}`, "https://site.example/p", "https://site.example", "https://site.example/thanks", now, now);
+    }
+    const post = (index: number, agent: string) => app.request(`/f/pivot-${index}`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", origin: "https://site.example", "user-agent": agent },
+      body: new URLSearchParams({ email: "a@example.com" }),
+    });
+    for (let i = 0; i < 20; i++) expect((await post(i, "sprayer")).status).toBe(303);
+    expect((await post(20, "sprayer")).status).toBe(429);
+    expect((await post(20, "bystander")).status).toBe(303);
+  });
+
   test("preflight and unknown IDs reveal no permissive CORS", async () => {
     const { app } = setup();
     const allowed = await app.request("/f/public-1", { method: "OPTIONS", headers: { origin: "https://site.example" } });

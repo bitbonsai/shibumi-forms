@@ -139,7 +139,7 @@ button:hover, .button-link:hover { border-color: var(--accent-hover); background
 .about-facts li { display: grid; gap: .35rem; align-content: start; padding: 1.1rem 1.2rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--quiet); }
 .about-facts strong { font-size: 1rem; letter-spacing: -.01em; }
 .about-facts span { color: var(--muted); font: var(--fs-sm)/1.55 var(--sans); }
-.about-facts b, .accent-text { color: var(--accent-text); }
+.about-facts b, .accent-text, .sent-to { color: var(--accent-text); }
 .about-cta { margin: 2.5rem 0 0; text-align: center; }
 .about-cta .button-link { padding: .85rem 1.6rem; font-size: 1rem; }
 .about-footnote { margin: 2rem 0 0; opacity: .8; transition: opacity 150ms; }

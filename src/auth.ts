@@ -183,6 +183,15 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     const fingerprint = await hmac(config.sessionSecret, `request:${requestSource(context, config)}:${email}:${new Date().toISOString().slice(0, 10)}`);
     if (!limiter.allows(rateKey) || !limiter.allows(fingerprint, 20)) return context.html(checkEmailView(config, enteredEmail));
 
+    // Global daily email budget: over budget, render the same neutral view
+    // (no enumeration) but send nothing. Rows in magic_links proxy for sends.
+    const sentToday = database.query<{ count: number }, [string]>("SELECT count(*) AS count FROM magic_links WHERE created_at >= ?")
+      .get(new Date().toISOString().slice(0, 10))!.count;
+    if (sentToday >= config.maxEmailsPerDay) {
+      console.log(JSON.stringify({ event: "email_budget_exceeded", budget: config.maxEmailsPerDay }));
+      return context.html(checkEmailView(config, enteredEmail));
+    }
+
     // Sign-in for an unknown address sends an account-creation link instead of
     // silently dropping the request. The on-site response stays identical.
     let signup = false;
@@ -231,6 +240,11 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
   });
 
   app.post("/auth/confirm", async (context) => {
+    // Login CSRF: a cross-site POST with an attacker's token would sign the
+    // victim in as the attacker. Same policy as admin mutations.
+    if (!sameOrigin(config, context.req.header("origin"), context.req.header("sec-fetch-site"))) {
+      return context.json({ error: "Forbidden" }, 403);
+    }
     const body = await context.req.parseBody();
     const token = stringField(body, "token");
     if (!TOKEN_PATTERN.test(token)) return context.html(invalidLinkView(config), 400);
@@ -276,7 +290,8 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
         }
         if (!user) throw new Error("INVALID_LINK");
 
-        if (link.pending_page_url) {
+        const owned = database.query<{ count: number }, [string]>("SELECT count(*) AS count FROM forms WHERE user_id = ?").get(user.id)!.count;
+        if (link.pending_page_url && owned < config.maxFormsPerAccount) {
           const page = new URL(link.pending_page_url);
           const path = page.pathname === "/" ? "" : page.pathname.replace(/\/$/, "");
           database.query(`
@@ -379,6 +394,8 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
     const raw = stringField(result.body, "page_url");
     const page = pageUrl(raw, config.environment === "production");
     if (!page) return context.json({ error: "Invalid page URL" }, 400);
+    const owned = database.query<{ count: number }, [string]>("SELECT count(*) AS count FROM forms WHERE user_id = ?").get(context.get("user").id)!.count;
+    if (owned >= config.maxFormsPerAccount) return context.json({ error: `Account limit of ${config.maxFormsPerAccount} forms reached` }, 429);
     const now = new Date().toISOString();
     const path = page.pathname === "/" ? "" : page.pathname.replace(/\/$/, "");
     const id = crypto.randomUUID();

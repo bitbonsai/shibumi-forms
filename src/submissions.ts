@@ -38,7 +38,25 @@ class WindowLimiter {
   }
 }
 
+// Pivot detection: one source spraying many distinct forms is abuse even when
+// every per-form counter stays under its own limit.
+class PivotTracker {
+  private windows = new Map<string, { reset: number; forms: Set<string> }>();
+  allows(source: string, formId: string, maxForms: number, windowMs: number): boolean {
+    const now = Date.now();
+    let window = this.windows.get(source);
+    if (!window || window.reset <= now) {
+      if (this.windows.size > 20_000) this.windows.clear();
+      window = { reset: now + windowMs, forms: new Set() };
+      this.windows.set(source, window);
+    }
+    window.forms.add(formId);
+    return window.forms.size <= maxForms;
+  }
+}
+
 const limiter = new WindowLimiter();
+const pivots = new PivotTracker();
 
 function add(payload: Payload, name: string, value: string): void {
   if (!name || name.length > MAX_NAME || /[\u0000-\u001f\u007f]/.test(name)) throw new Error("INVALID_FIELD");
@@ -86,7 +104,7 @@ function successful(context: Context<AuthEnv>, form: FormRow, json: boolean) {
   return context.redirect(form.success_url, 303);
 }
 
-async function requestKey(context: Context<AuthEnv>, config: AppConfig, formId: string): Promise<string> {
+async function requestKeys(context: Context<AuthEnv>, config: AppConfig, formId: string): Promise<{ formKey: string; sourceKey: string }> {
   const peer = context.env?.remoteAddress;
   const loopback = peer === "::1" || peer === "127.0.0.1" || peer?.startsWith("::ffff:127.");
   const forwarded = config.trustedProxy === "loopback" && loopback
@@ -96,8 +114,9 @@ async function requestKey(context: Context<AuthEnv>, config: AppConfig, formId: 
     ? forwarded
     : peer || context.req.header("user-agent") || "unknown";
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(config.sessionSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${formId}:${source}:${new Date().toISOString().slice(0, 10)}`));
-  return Buffer.from(digest).toString("base64url");
+  const day = new Date().toISOString().slice(0, 10);
+  const sign = async (value: string) => Buffer.from(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value))).toString("base64url");
+  return { formKey: await sign(`${formId}:${source}:${day}`), sourceKey: await sign(`source:${source}:${day}`) };
 }
 
 export function registerSubmissionRoutes(app: Hono<AuthEnv>, config: AppConfig, database: AppDatabase): void {
@@ -118,7 +137,8 @@ export function registerSubmissionRoutes(app: Hono<AuthEnv>, config: AppConfig, 
     if (!form) return context.json({ error: "Not found" }, 404);
     const origin = context.req.header("origin");
     if (origin && origin !== form.allowed_origin) return context.json({ error: "Origin not allowed" }, 403);
-    if (!limiter.allows(await requestKey(context, config, form.id), 60, 60_000) || !limiter.allows("global", 1000, 60_000)) {
+    const keys = await requestKeys(context, config, form.id);
+    if (!limiter.allows(keys.formKey, 60, 60_000) || !pivots.allows(keys.sourceKey, form.id, 20, 60_000)) {
       return context.json({ error: "Too many requests" }, 429);
     }
 
@@ -138,6 +158,9 @@ export function registerSubmissionRoutes(app: Hono<AuthEnv>, config: AppConfig, 
     if ((typeof honeypot === "string" && honeypot) || (Array.isArray(honeypot) && honeypot.some(Boolean))) {
       return successful(context, form, parsed.json);
     }
+
+    const stored = database.query<{ count: number }, [string]>("SELECT count(*) AS count FROM submissions WHERE form_id = ?").get(form.id)!.count;
+    if (stored >= config.maxSubmissionsPerForm) return context.json({ error: "Too many requests" }, 429);
 
     database.query("INSERT INTO submissions (id, form_id, payload_json, created_at) VALUES (?, ?, ?, ?)")
       .run(crypto.randomUUID(), form.id, JSON.stringify(parsed.payload), new Date().toISOString());

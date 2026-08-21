@@ -172,6 +172,46 @@ describe("magic-link authentication", () => {
     expect((await app.request("/admin", { headers: { cookie: secondCookie } })).status).toBe(200);
   });
 
+  test("email budget of zero skips send but renders the same view", async () => {
+    const zeroBudget = loadConfig({
+      NODE_ENV: "test", PUBLIC_URL: "http://localhost:3000", DATABASE_PATH: ":memory:",
+      SESSION_SECRET: "0123456789abcdef0123456789abcdef", EMAIL_FROM: "forms@example.com",
+      EMAIL_PROVIDER: "discard", TERMS_URL: "https://example.com/terms", TERMS_VERSION: "1",
+      PRIVACY_URL: "https://example.com/privacy", MAX_EMAILS_PER_DAY: "0",
+    });
+    database = openDatabase(":memory:");
+    migrate(database);
+    const mailer = new RecordingMailer();
+    const app = createApp(zeroBudget, database, mailer);
+    const response = await app.request("/auth/magic-link", form({
+      purpose: "register", email: "person@example.com",
+      page_url: "https://example.com/contact", accepted_terms: "yes",
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("Check your email");
+    expect(mailer.messages).toHaveLength(0);
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM magic_links").get()!.count).toBe(0);
+  });
+
+  test("cross-origin confirm POST is rejected (login CSRF)", async () => {
+    const { app, mailer, database } = setup();
+    const token = await requestRegistration(app, mailer);
+
+    const crossSite = await app.request("/auth/confirm", {
+      ...form({ token }),
+      headers: { ...form({}).headers, origin: "https://evil.example" },
+    });
+    expect(crossSite.status).toBe(403);
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM sessions").get()!.count).toBe(0);
+
+    const sameOriginConfirm = await app.request("/auth/confirm", {
+      ...form({ token }),
+      headers: { ...form({}).headers, origin: config.publicUrl.origin },
+    });
+    expect(sameOriginConfirm.status).toBe(303);
+    expect(database.query<{ count: number }, []>("SELECT count(*) AS count FROM sessions").get()!.count).toBe(1);
+  });
+
   test("CSRF protects logout", async () => {
     const { app, mailer, database } = setup();
     const token = await requestRegistration(app, mailer);
