@@ -77,7 +77,7 @@ h1, h2 { margin: 0; font-family: var(--serif); font-weight: 400; letter-spacing:
 p { margin-top: 0; }
 .eyebrow, .step { margin: 0 0 1rem; color: var(--accent); font: 700 var(--fs-xs)/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; }
 .auth-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(22rem, .75fr); gap: clamp(2rem, 7vw, 6rem); align-items: center; min-height: calc(100svh - 8rem); padding: clamp(2rem, 6vw, 5rem) 0; }
-.intro h1 { max-width: 8ch; font-size: clamp(4rem, 9vw, 7.5rem); }
+.intro h1 { max-width: 13ch; font-size: clamp(4rem, 9vw, 7.5rem); }
 .lede { max-width: 32rem; margin-top: 2rem; color: var(--muted); font-size: clamp(1.125rem, 1.55vw, 1.25rem); }
 .signal { display: flex; align-items: center; gap: .8rem; margin-top: 3.5rem; color: var(--muted); font: var(--fs-xs) var(--mono); text-transform: uppercase; }
 .signal i { position: relative; width: min(12vw, 8rem); height: 1px; background: var(--line); }
