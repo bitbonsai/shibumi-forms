@@ -4,6 +4,8 @@ Open-source form collection for static sites. One container, one SQLite database
 
 > Pre-alpha. Core self-hosted flow exists: magic-link authentication, form ingestion, submission dashboard, CSV export, deletion, backup, and restore.
 
+User docs (integration, JSON API, limits, self-hosting): <https://forms.shibumistack.dev/docs>, sources in `docs/`.
+
 ## Development
 
 Requires Bun 1.3.14+.

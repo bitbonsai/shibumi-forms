@@ -20,3 +20,7 @@ Run `bun run typecheck && bun test && bun audit` after changes.
 - Compose interpolation (`${SHIBUMI_PORT:-9001}`) reads `.env` only. Container app env comes from `.env.production`, falling back to `.env` (ship deploys keep secrets in `.env` on the server).
 - `scripts/ship.ts` is vendored and self-updating; excluded from tsconfig (fails strict). Commit its self-update bump after `bun ship`.
 - New migrations: tests use column-named INSERTs and derive migration count from the `migrations/` dir; keep both patterns.
+- `view-transition-name` on `.site-header` kills its `::before` backdrop-filter (paint isolation, nav blur dead). Names go on `.mark` / `nav` children only.
+- App reads `docs/*.md` at boot (src/docs.ts). New top-level dirs the app reads must be COPYed in Dockerfile; missing `docs/` failed deploy health check (auto-rollback restored previous release).
+- Docs copy lives in two places: `docs/*.md` (rendered at boot, served raw) and `public/about.md` + `public/llms.txt`. Copy changes need both sides.
+- SQLite CHECK constraints can't be altered; migration 004 pattern = rebuild table + `INSERT SELECT *` (column order must match 001 + 002 ALTERs).
