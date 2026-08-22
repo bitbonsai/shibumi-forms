@@ -38,7 +38,9 @@ export function formatRelative(iso: string, now = Date.now()): string {
   return formatDate(iso);
 }
 
-function layout(config: AppConfig, title: string, content: string, admin = false, signedIn = admin): string {
+const STACK_MENU = `<details class="stack-menu"><summary>Shibumi Stack</summary><div class="stack-popover"><a href="https://shibumistack.dev"><span>Stack</span><small>Ship from your computer</small></a><a href="https://forms.shibumistack.dev" aria-current="page"><span>Forms</span><small>Forms for static sites</small></a><a href="https://server.shibumistack.dev"><span>Server</span><small>Run apps on your VPS</small></a></div></details>`;
+
+export function layout(config: AppConfig, title: string, content: string, admin = false, signedIn = admin, extra: { head?: string; bodyClass?: string } = {}): string {
   const turnstileScript = config.turnstileSiteKey
     ? '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>'
     : "";
@@ -60,19 +62,19 @@ function layout(config: AppConfig, title: string, content: string, admin = false
   <meta name="twitter:card" content="summary_large_image">
   <script src="/assets/theme.js"></script>
   <link rel="stylesheet" href="/assets/styles.css">
-  ${turnstileScript}
+  ${turnstileScript}${extra.head || ""}
 </head>
-<body>
+<body${extra.bodyClass ? ` class="${extra.bodyClass}"` : ""}>
   <div class="shell">
     <header class="site-header">
       <a class="mark" href="/" aria-label="Shibumi Forms home"><svg class="mark-logo" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.75 10.375C1.75 10.4911 1.75 10.5491 1.75482 10.598C1.80158 11.0728 2.17721 11.4484 2.65198 11.4952C2.70087 11.5 2.75892 11.5 2.875 11.5H12.125C13.0678 11.5 13.5392 11.5 13.8321 11.2071C14.125 10.9142 14.125 10.4428 14.125 9.5V6.75C14.125 5.80719 14.125 5.33579 13.8321 5.04289C13.5392 4.75 13.0678 4.75 12.125 4.75H3.5C2.79777 4.75 2.44665 4.75 2.19443 4.91853C2.08524 4.99149 1.99149 5.08524 1.91853 5.19443C1.75 5.44665 1.75 5.79777 1.75 6.5C1.75 7.20223 1.75 7.55335 1.91853 7.80557C1.99149 7.91476 2.08524 8.00851 2.19443 8.08147C2.44665 8.25 2.79777 8.25 3.5 8.25H6.625M5.5 9.375L6.625 8.25L5.5 7.125" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>shibumi<span class="mark-tld"> forms</span></span></a>
-      <nav aria-label="Primary"><a href="/about">About</a><a href="https://shibumistack.dev">Shibumi Stack</a><a class="${signedIn ? "nav-dashboard" : ""}" href="${signedIn ? "/admin" : "/login"}">${signedIn ? "Dashboard" : "Sign in"}</a><a class="nav-icon" href="https://github.com/bitbonsai/shibumi-forms" aria-label="Source on GitHub"><i class="icon icon-github"></i></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></nav>
+      <nav aria-label="Primary"><a href="/about">About</a><a href="/docs">Docs</a>${STACK_MENU}<a class="${signedIn ? "nav-dashboard" : ""}" href="${signedIn ? "/admin" : "/login"}">${signedIn ? "Dashboard" : "Sign in"}</a><a class="nav-icon" href="https://github.com/bitbonsai/shibumi-forms" aria-label="Source on GitHub"><i class="icon icon-github"></i></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></nav>
     </header>
     <main>${content}${admin ? '<script src="/assets/admin.js" defer></script>' : ""}</main>
     <footer class="site-footer">
       <div class="footer-line">
         <span>Simple infrastructure for static sites.</span>
-        <nav aria-label="Policies"><a href="/about">About</a><a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a><a href="mailto:info@shibumistack.dev">Report abuse</a></nav>
+        <nav aria-label="Policies"><a href="/about">About</a><a href="/docs">Docs</a>${STACK_MENU}<a href="${escapeHtml(config.termsUrl.href)}">Terms</a><a href="${escapeHtml(config.privacyUrl.href)}">Privacy</a><a href="mailto:info@shibumistack.dev">Report abuse</a></nav>
       </div>
       <p class="footer-meta">MIT License &copy; 2026 Shibumi Forms &middot; Made with <svg class="footer-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="sr-only">love</span> by <a href="https://bitbonsai.com">@bitbonsai</a></p>
     </footer>
@@ -245,7 +247,7 @@ export function confirmView(config: AppConfig, token: string, hostname?: string,
       <input type="hidden" name="token" value="${escapeHtml(token)}">
       <button class="danger" type="submit">Delete my account</button>
     </form>
-    <p class="alternate">Changed your mind? Ignore this page and the link expires on its own.</p>
+    <p class="alternate">If you changed your mind, ignore this page. The link expires on its own.</p>
   </div></section>`);
   }
   const terms = creating
@@ -293,7 +295,7 @@ export function accountView(config: AppConfig, email: string, csrf: string, sess
   </a>`).join("");
   return layout(config, "Account", `<section class="workspace admin-workspace">
     <header class="workspace-title admin-title">
-      <div><p class="eyebrow">Forms workspace</p><h1>Your forms</h1><p class="workspace-dek">Endpoints, submissions, and account access in one place.</p></div>
+      <div><p class="eyebrow">Forms workspace</p><h1>Your forms</h1><p class="workspace-dek">Your endpoints, their submissions, and account settings.</p></div>
       <div class="account-chip"><span>Signed in as</span><strong>${escapeHtml(email)}</strong></div>
     </header>
     <div class="admin-layout">
@@ -302,7 +304,7 @@ export function accountView(config: AppConfig, email: string, csrf: string, sess
         <div class="forms-grid">${formCards || '<div class="empty-state"><span class="empty-mark" aria-hidden="true"><i class="icon icon-plus"></i></span><h2>No forms yet</h2><p>Create your first endpoint.</p></div>'}</div>
         <aside class="create-card" aria-labelledby="create-heading">
           <div class="create-copy"><span class="create-mark" aria-hidden="true"><i class="icon icon-plus"></i></span><div><p class="step">New endpoint</p><h2 id="create-heading">Connect another page</h2></div></div>
-          <p class="create-guidance"><strong>What happens next</strong><span>We generate endpoint, paste-ready HTML, and coding-agent prompt.</span></p>
+          <p class="create-guidance"><strong>What happens next</strong><span>You get an endpoint, paste-ready HTML, and a prompt for your coding agent.</span></p>
           <form action="/admin/forms/create" method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label for="new-page-url">Public page URL</label><div class="create-input-row"><input id="new-page-url" name="page_url" type="url" required placeholder="https://your-site.com/contact"><button type="submit">Continue <i class="icon icon-logo" aria-hidden="true"></i></button></div></form>
         </aside>
       </section>

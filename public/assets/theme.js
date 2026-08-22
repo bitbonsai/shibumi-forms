@@ -13,3 +13,17 @@ document.addEventListener("click", (event) => {
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem("shibumi-theme", theme); } catch {}
 });
+
+document.addEventListener("click", (event) => {
+  for (const menu of document.querySelectorAll("details.stack-menu[open]")) {
+    if (!menu.contains(event.target)) menu.open = false;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const menu = document.querySelector("details.stack-menu[open]");
+  if (!menu) return;
+  menu.open = false;
+  menu.querySelector("summary")?.focus();
+});

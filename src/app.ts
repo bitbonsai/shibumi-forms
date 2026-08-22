@@ -15,6 +15,10 @@ export function createApp(config: AppConfig, database: AppDatabase, mailer: Mail
   app.use("*", bodyLimit({ maxSize: 64 * 1024, onError: (context) => context.json({ error: "Request body too large" }, 413) }));
   app.use("/assets/*", serveStatic({ root: "./public" }));
   app.use("/.well-known/*", serveStatic({ root: "./public" }));
+  app.get("/llms.txt", serveStatic({ path: "./public/llms.txt" }));
+  app.get("/about.md", async () => new Response(await Bun.file("./public/about.md").text(), {
+    headers: { "Content-Type": "text/markdown; charset=utf-8" },
+  }));
 
   app.get("/healthz", (context) => context.json({ ok: true }));
 

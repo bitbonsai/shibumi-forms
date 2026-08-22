@@ -69,6 +69,18 @@ nav { display: flex; align-items: center; gap: 1rem; color: var(--muted); font: 
 nav a { border-bottom: 1px solid transparent; text-decoration: none; }
 nav a:hover { border-bottom-color: var(--accent); color: var(--text); }
 .nav-dashboard { color: var(--text); font-weight: 600; }
+.stack-menu { position: relative; }
+.stack-menu summary { cursor: pointer; list-style: none; transition: color 160ms; }
+.stack-menu summary::-webkit-details-marker { display: none; }
+.stack-menu summary:hover, .stack-menu summary:focus-visible, .stack-menu[open] summary { color: var(--text); }
+.stack-popover { position: absolute; top: calc(100% + .75rem); right: 0; z-index: 30; width: 14rem; padding: .45rem; border-radius: .5rem; background: light-dark(#fffaf0, #30231d); box-shadow: 0 .8rem 2.5rem light-dark(rgb(20 14 9 / 18%), rgb(0 0 0 / 58%)); }
+.stack-popover a { display: block; padding: .65rem .75rem; border-bottom: 0; border-radius: .3rem; color: var(--muted); }
+.stack-popover a:hover, .stack-popover a:focus-visible { background: var(--quiet); color: var(--text); outline: none; }
+.stack-popover a[aria-current="page"] { color: var(--accent-text); }
+.stack-popover span, .stack-popover small { display: block; }
+.stack-popover span { color: inherit; font-weight: 700; }
+.stack-popover small { margin-top: .1rem; color: var(--muted); font-size: var(--fs-xs); }
+.site-footer .stack-popover { top: auto; right: auto; bottom: calc(100% + .75rem); left: 0; }
 .theme-toggle { appearance: none; display: inline-grid; flex: none; place-items: center; width: 1.7rem; height: 1.7rem; margin: 0; padding: 0; border: 0; background: transparent; color: var(--muted); line-height: 0; cursor: pointer; }
 .theme-toggle:hover { border: 0; background: transparent; color: var(--text); }
 .theme-toggle svg { grid-area: 1 / 1; width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

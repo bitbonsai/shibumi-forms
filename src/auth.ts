@@ -5,6 +5,7 @@ import type { AppConfig } from "./config";
 import type { AppDatabase } from "./database";
 import type { Mailer } from "./email";
 import type { AppVariables } from "./security";
+import { docsMarkdownSource, renderDocsPage } from "./docs";
 import { aboutView, accountView, checkEmailView, confirmView, invalidLinkView, loginView, registrationView } from "./views";
 
 const MAGIC_LINK_MINUTES = 15;
@@ -161,6 +162,18 @@ export function registerAuthRoutes(app: App, config: AppConfig, database: AppDat
   app.get("/", async (context) => context.html(registrationView(config, { signedIn: await hasSession(context) })));
   app.get("/login", async (context) => context.html(loginView(config, { signedIn: await hasSession(context) })));
   app.get("/about", async (context) => context.html(aboutView(config, await hasSession(context))));
+  app.get("/docs", async (context) => context.html(renderDocsPage(config, "", await hasSession(context))!));
+  app.get("/docs/:page", async (context) => {
+    const param = context.req.param("page");
+    if (param.endsWith(".md")) {
+      const source = docsMarkdownSource(param === "index.md" ? "" : param.slice(0, -3));
+      if (!source) return context.json({ error: "Not found" }, 404);
+      return new Response(source, { headers: { "Content-Type": "text/markdown; charset=utf-8" } });
+    }
+    const html = renderDocsPage(config, param, await hasSession(context));
+    if (!html) return context.json({ error: "Not found" }, 404);
+    return context.html(html);
+  });
 
   app.post("/auth/magic-link", async (context) => {
     const body = await context.req.parseBody();

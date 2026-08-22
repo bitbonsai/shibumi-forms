@@ -1,0 +1,23 @@
+# Shibumi Forms
+
+> Form backend for static sites. Plain HTML in front, one container and one SQLite database behind it. Hosted free at https://forms.shibumistack.dev; MIT-licensed self-hosted core.
+
+## Pages
+
+- [About](/about.md): why it exists, hosted terms, donations
+
+## Docs
+
+- [Overview](/docs/index.md)
+- [Connect your form](/docs/connect-form.md): endpoint, snippet, honeypot, accepted content
+- [JSON API](/docs/json-api.md): fetch posts, CORS, response codes
+- [Self-hosting](/docs/self-hosting.md): container, compose, environment variables
+- [Backup and restore](/docs/backup-restore.md)
+- [Limits](/docs/limits.md): hosted quotas and rate limits
+- [Security and data handling](/docs/security.md)
+
+## Links
+
+- [Source](https://github.com/bitbonsai/shibumi-forms)
+- [Shibumi Stack](https://shibumistack.dev)
+- [shibumi-server](https://server.shibumistack.dev)
