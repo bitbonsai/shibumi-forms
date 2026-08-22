@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production --ignore-scripts
 
+COPY docs ./docs
 COPY migrations ./migrations
 COPY public ./public
 COPY scripts ./scripts
